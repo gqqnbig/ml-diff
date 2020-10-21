@@ -51,7 +51,7 @@ def generateFiles(baseFolder):
 				textArray = mx.ndarray.cast(textArray, dtype='int32')
 				workingCopy[l] = textArray.asnumpy().tolist()
 
-			f = open(folder + str(j) + '.txt', 'w')
+			f = open(os.path.join(folder,f'{str(j)}-{choice}.txt'), 'w')
 			f.write(indexToString(workingCopy))
 			f.write('\n')
 			f.close()
