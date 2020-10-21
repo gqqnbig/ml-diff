@@ -40,15 +40,16 @@ def generateFiles(baseFolder):
 			choice = random.choice(['delete', 'add', 'both'])
 
 			l = round(random.uniform(0, len(workingCopy) - 1))
-			c = round(random.uniform(0, len(workingCopy[l]) - 1))
 			if choice == 'delete':
-				del workingCopy[l][c]
+				del workingCopy[l]
 			elif choice == 'add':
-				newChar = int(round(random.uniform(32, 126)))
-				workingCopy[l].insert(c, newChar)
+				textArray = (mx.ndarray.random.uniform(shape=(20)) * (126 - 32) + 32).round()
+				textArray = mx.ndarray.cast(textArray, dtype='int32')
+				workingCopy.insert(l, textArray.asnumpy().tolist())
 			else:
-				newChar = int(round(random.uniform(32, 126)))
-				workingCopy[l][c] = newChar
+				textArray = (mx.ndarray.random.uniform(shape=(20)) * (126 - 32) + 32).round()
+				textArray = mx.ndarray.cast(textArray, dtype='int32')
+				workingCopy[l] = textArray.asnumpy().tolist()
 
 			f = open(folder + str(j) + '.txt', 'w')
 			f.write(indexToString(workingCopy))
@@ -60,7 +61,7 @@ def generateFiles(baseFolder):
 if __name__ == '__main__':
 	asciiRange = (32, 126)
 
-	# generateFiles(r'D:\renaming\data\generated' '\\')
+	generateFiles(r'D:\renaming\data\generated' '\\')
 
 	for dir in os.scandir(r'D:\renaming\data\generated'):
 		if not dir.is_dir():
