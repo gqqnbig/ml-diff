@@ -1,13 +1,13 @@
-# import d2lzh as d2l
-from mxnet import nd
 from mxnet.gluon import rnn
 from mxnet import autograd, gluon, image, init, nd
+from mxnet.gluon import data as gdata, loss as gloss, nn, utils as gutils
 import mxnet as mx
-import mxnet.gluon.loss as gloss
 import math
 import os
 import random
 import time
+
+import typing
 
 num_hiddens = 256
 vocab_size = 126 - 32 + 1
@@ -99,10 +99,10 @@ def init_lstm_state(batch_size, num_hiddens):
 			nd.zeros(shape=(batch_size, num_hiddens)))
 
 
-def loadData():
+def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 	folder = r'D:\renaming\data\generated'
 	data = []
-	# labels = []
+	labels = []
 	for diff in os.scandir(folder):
 		if diff.is_dir() or not diff.name.endswith('.diff'):
 			continue
@@ -116,13 +116,13 @@ def loadData():
 
 		sample = [ord(c) for c in sample]
 		if 'add' in diff.name:
-			sample.append(128)
+			labels.append(0)
 		# labels.append('add')
 		elif 'delete' in diff.name:
-			sample.append(129)
+			labels.append(1)
 		# labels.append('delete')
 		elif 'both' in diff.name:
-			sample.append(130)
+			labels.append(2)
 		# labels.append('both')
 		else:
 			print(f'Unknown file: {diff.path}')
@@ -138,7 +138,7 @@ def loadData():
 		assert len(sample) == num_steps
 	data = mx.ndarray.array(data)
 	assert data.shape[1] == num_steps
-	return data
+	return data, mx.ndarray.array(labels)
 
 
 def predict_rnn(prefix, num_chars, rnn, params, init_rnn_state,
@@ -228,50 +228,124 @@ def train_and_predict_rnn(rnn, get_params, init_rnn_state, num_hiddens, vocab_si
 					num_hiddens, vocab_size, idx_to_char, char_to_idx))
 
 
-if __name__ == '__main__':
-	data = loadData()
-	num_steps = data.shape[1]
+def evaluate_accuracy(data_iter, net):
+	"""Evaluate accuracy of a model on the given data set."""
 
-	data = mx.nd.shuffle(data)
-	testData = mx.nd.crop(data, 0, len(data) // 10)
-	trainData = mx.nd.crop(data, len(data) // 10, (None,))
+	acc_sum, n = nd.array([0]), 0
+	for batch in data_iter:
+		features, labels, _ = _get_batch(batch, [mx.cpu()])
+		for X, y in zip(features, labels):
+			y = y.astype('float32')
+			acc_sum += (net(X).argmax(axis=1) == y).sum().copyto(mx.cpu())
+			n += y.size
+		acc_sum.wait_to_read()
+	return acc_sum.asscalar() / n
+
+
+def _get_batch(batch, ctx):
+	"""Return features and labels on ctx."""
+	features, labels = batch
+	if labels.dtype != features.dtype:
+		labels = labels.astype(features.dtype)
+	return (gutils.split_and_load(features, ctx),
+			gutils.split_and_load(labels, ctx), features.shape[0])
+
+
+def train_ch3(net, trainIterator, testIterator, loss, num_epochs, batch_size,
+			  params=None, lr=None, trainer=None):
+	"""Train and evaluate a model with CPU."""
+	for epoch in range(num_epochs):
+		train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
+		for X, y in trainIterator:
+			assert y.ndim == 1, "Y is 1-d array whose values are categories."
+			with autograd.record():
+				y_hat = net(X)
+
+				categoryCount = y_hat.shape[1]
+				for item in y:
+					assert 0 <= item < categoryCount, 'y_hat和y不匹配。y是类别编号的数组，从0起。对于第i个样本，y_hat[i]是一个数组，记录每个类别的概率。\n' \
+													  f'目前，y_hat的形状为{y_hat.shape}，说明应有{categoryCount}种类别；但是y中有数值{item.asscalar()}，不对应任何类别。'
+
+				l = loss(y_hat, y).sum()
+			l.backward()
+			if trainer is None:
+				sgd(params, lr, batch_size)
+			else:
+				trainer.step(batch_size)
+			y = y.astype('float32')
+			train_l_sum += l.asscalar()
+			train_acc_sum += (y_hat.argmax(axis=1) == y).sum().asscalar()
+			n += y.size
+		test_acc = evaluate_accuracy(testIterator, net)
+		print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f'
+			  % (epoch + 1, train_l_sum / n, train_acc_sum / n, test_acc))
+
+
+if __name__ == '__main__':
+	X, y = loadData()
+	length = len(X)
+	s = mx.ndarray.shuffle(mx.ndarray.array(list(range(length))))
+
+	# num_steps = data.shape[1]
+
+	trainX = mx.ndarray.take(X, mx.nd.crop(s, length // 10, (None,)))
+	trainY = mx.ndarray.take(y, mx.nd.crop(s, length // 10, (None,)))
+	testX = mx.ndarray.take(X, mx.nd.crop(s, 0, length // 10))
+	testY = mx.ndarray.take(y, mx.nd.crop(s, 0, length // 10))
+	assert trainX.shape[0] == trainY.shape[0], '输入与输出的长度必须相同'
+	assert testX.shape[0] == testY.shape[0], '输入与输出的长度必须相同'
+	assert trainX.shape[0] > testX.shape[0], '训练数据必须多于测试数据'
+
+	trainIterator = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(trainX, trainY), batch_size=batch_size)
+	testIterator = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(testX, testY), batch_size=batch_size)
 
 	# +3是因为有三种操作类别
 	vocab_size = 127 + 3
+	net = nn.Sequential()
+	net.add(nn.Dense(127, activation='relu'),
+			nn.Dense(3))
+
+	net.initialize(init.Normal(sigma=0.01))
+
+	loss = gloss.SoftmaxCrossEntropyLoss()
+	trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
+	num_epochs = 5
 
 	num_inputs = vocab_size
 	num_outputs = vocab_size
 
+	train_ch3(net, trainIterator, testIterator, loss, num_epochs, batch_size, None, None, trainer)
 
-	def get_params():
-		def _one(shape):
-			return nd.random.normal(scale=0.01, shape=shape)
-
-		def _three():
-			return (_one((num_inputs, num_hiddens)),
-					_one((num_hiddens, num_hiddens)),
-					nd.zeros(num_hiddens))
-
-		W_xi, W_hi, b_i = _three()  # 输入门参数
-		W_xf, W_hf, b_f = _three()  # 遗忘门参数
-		W_xo, W_ho, b_o = _three()  # 输出门参数
-		W_xc, W_hc, b_c = _three()  # 候选记忆细胞参数
-		# 输出层参数
-		W_hq = _one((num_hiddens, num_outputs))
-		b_q = nd.zeros(num_outputs)
-		# 附上梯度
-		params = [W_xi, W_hi, b_i, W_xf, W_hf, b_f, W_xo, W_ho, b_o, W_xc, W_hc, b_c, W_hq, b_q]
-		for param in params:
-			param.attach_grad()
-		return params
-
-
-	lstm_layer = rnn.LSTM(num_hiddens)
-	model = RNNModel(lstm_layer, vocab_size)
-
-	for X, Y in data_iter_random(trainData, batch_size):
-		print(X)
-		print(Y)
-		print('----------------------')
-
-	train_and_predict_rnn(lstm, get_params, init_lstm_state, num_hiddens, vocab_size, data, idx_to_char, False, num_epochs, num_steps, lr, clipping_theta, batch_size, pred_period, 1)
+#
+# def get_params():
+# 	def _one(shape):
+# 		return nd.random.normal(scale=0.01, shape=shape)
+#
+# 	def _three():
+# 		return (_one((num_inputs, num_hiddens)),
+# 				_one((num_hiddens, num_hiddens)),
+# 				nd.zeros(num_hiddens))
+#
+# 	W_xi, W_hi, b_i = _three()  # 输入门参数
+# 	W_xf, W_hf, b_f = _three()  # 遗忘门参数
+# 	W_xo, W_ho, b_o = _three()  # 输出门参数
+# 	W_xc, W_hc, b_c = _three()  # 候选记忆细胞参数
+# 	# 输出层参数
+# 	W_hq = _one((num_hiddens, num_outputs))
+# 	b_q = nd.zeros(num_outputs)
+# 	# 附上梯度
+# 	params = [W_xi, W_hi, b_i, W_xf, W_hf, b_f, W_xo, W_ho, b_o, W_xc, W_hc, b_c, W_hq, b_q]
+# 	for param in params:
+# 		param.attach_grad()
+# 	return params
+#
+#
+# lstm_layer = rnn.LSTM(num_hiddens)
+# model = RNNModel(lstm_layer, vocab_size)
+#
+# for X, Y in data_iter_random(trainData, batch_size):
+# 	print(X)
+# 	print(Y)
+# 	print('----------------------')
+#
+# train_and_predict_rnn(lstm, get_params, init_lstm_state, num_hiddens, vocab_size, data, idx_to_char, False, num_epochs, num_steps, lr, clipping_theta, batch_size, pred_period, 1)
