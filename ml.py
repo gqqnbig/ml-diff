@@ -138,7 +138,7 @@ def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 		assert len(sample) == num_steps
 	data = mx.ndarray.array(data, dtype='int8')
 	assert data.shape[1] == num_steps
-	return data, mx.ndarray.array(labels)
+	return data, mx.ndarray.array(labels, dtype='int8')
 
 
 def predict_rnn(prefix, num_chars, rnn, params, init_rnn_state,
