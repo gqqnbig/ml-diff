@@ -136,7 +136,7 @@ def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 			data[i].extend([0] * (num_steps - len(data[i])))
 	for sample in data:
 		assert len(sample) == num_steps
-	data = mx.ndarray.array(data)
+	data = mx.ndarray.array(data, dtype='int8')
 	assert data.shape[1] == num_steps
 	return data, mx.ndarray.array(labels)
 
