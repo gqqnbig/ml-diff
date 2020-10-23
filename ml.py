@@ -283,6 +283,8 @@ def train_ch3(net, trainIterator, testIterator, loss, num_epochs, batch_size,
 
 if __name__ == '__main__':
 	X, y = loadData()
+
+	X = nd.one_hot(X, X.max().asscalar())
 	length = len(X)
 	s = mx.ndarray.shuffle(mx.ndarray.array(list(range(length))))
 
