@@ -14,7 +14,6 @@ vocab_size = 126 - 32 + 1
 lr = 1e2
 clipping_theta = 1e-2
 batch_size = 20
-num_epochs = 160
 
 
 class RNNModel(mx.gluon.nn.Block):
@@ -113,8 +112,20 @@ def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 				f.readline()
 
 			sample = f.read()
+		# lines = f.readlines()
 
 		sample = [ord(c) for c in sample]
+
+		lineCount = len(sample) // 22
+		assert len(sample) % 22 == 0, '输入必须是22的倍数，因为一行有22个字符。'
+
+		for i in range(lineCount):
+			assert sample[i * 22 + 21] == ord('\n')
+
+		# 只看第一个字符
+		# firstColumn = [sample[i * 22] for i in list(range(lineCount))]
+		# sample = firstColumn
+
 		if 'add' in diff.name:
 			labels.append(0)
 		# labels.append('add')
@@ -122,6 +133,7 @@ def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 			labels.append(1)
 		# labels.append('delete')
 		elif 'both' in diff.name:
+			# continue
 			labels.append(2)
 		# labels.append('both')
 		else:
@@ -277,8 +289,7 @@ def train_ch3(net, trainIterator, testIterator, loss, num_epochs, batch_size,
 			train_acc_sum += (y_hat.argmax(axis=1) == y).sum().asscalar()
 			n += y.size
 		test_acc = evaluate_accuracy(testIterator, net)
-		print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f'
-			  % (epoch + 1, train_l_sum / n, train_acc_sum / n, test_acc))
+		print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f' % (epoch + 1, train_l_sum / n, train_acc_sum / n, test_acc))
 
 
 if __name__ == '__main__':
@@ -302,7 +313,7 @@ if __name__ == '__main__':
 	testIterator = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(testX, testY), batch_size=batch_size)
 
 	# +3是因为有三种操作类别
-	vocab_size = 127 + 3
+	# vocab_size = 127 + 3
 	net = nn.Sequential()
 	net.add(nn.Dense(127, activation='relu'),
 			nn.Dense(3))
@@ -311,10 +322,10 @@ if __name__ == '__main__':
 
 	loss = gloss.SoftmaxCrossEntropyLoss()
 	trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
-	num_epochs = 5
+	num_epochs = 50
 
-	num_inputs = vocab_size
-	num_outputs = vocab_size
+	# num_inputs = vocab_size
+	# num_outputs = vocab_size
 
 	train_ch3(net, trainIterator, testIterator, loss, num_epochs, batch_size, None, None, trainer)
 
