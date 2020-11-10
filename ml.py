@@ -22,6 +22,20 @@ def sgd(params, lr, batch_size):
 		param[:] = param - lr * param.grad / batch_size
 
 
+def getLabel(file):
+	if 'add' in file.name:
+		return 0
+	# labels.append('add')
+	elif 'delete' in file.name:
+		return 1
+	# labels.append('delete')
+	elif 'both' in file.name:
+		# continue
+		return 2
+
+	raise Exception('Label not found')
+
+
 def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 	folder = r'D:\renaming\data\generated'
 	data = []
@@ -50,18 +64,7 @@ def loadData() -> typing.Tuple[mx.ndarray.NDArray, mx.ndarray.NDArray]:
 		# firstColumn = [sample[i * 22] for i in list(range(lineCount))]
 		# sample = firstColumn
 
-		if 'add' in diff.name:
-			labels.append(0)
-		# labels.append('add')
-		elif 'delete' in diff.name:
-			labels.append(1)
-		# labels.append('delete')
-		elif 'both' in diff.name:
-			# continue
-			labels.append(2)
-		# labels.append('both')
-		else:
-			print(f'Unknown file: {diff.path}')
+		labels.append(getLabel(diff))
 
 		# print([mapIndexToChar(c) for c in sample])
 		data.append(sample)
