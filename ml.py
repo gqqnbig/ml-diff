@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 import os
+import sys
 
 try:
 	tf.__version__
@@ -102,7 +103,8 @@ if __name__ == '__main__':
 	model.add(tf.keras.layers.Flatten())
 	model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
 	model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
-	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=True)
+
+	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
 
 	num_epochs = 50
 	model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
