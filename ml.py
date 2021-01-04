@@ -96,4 +96,4 @@ if __name__ == '__main__':
 	model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'], run_eagerly=True)
 
 	num_epochs = 50
-	model.fit(train_data, validation_data=test_data, epochs=num_epochs)
+	model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
