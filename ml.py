@@ -31,8 +31,8 @@ def getLabel(file):
 	raise Exception('Label not found')
 
 
-def loadData():
-	folder = r'D:\renaming\data\generated'
+
+def loadData(folder):
 	data = []
 	labels = []
 	for diff in os.scandir(folder):
@@ -77,7 +77,7 @@ def loadData():
 
 
 if __name__ == '__main__':
-	dataset = loadData()
+	dataset = loadData(r'D:\renaming\data\generated')
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a label vector of size {dataset.element_spec[1].shape[0]}. ' +
 		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.')
@@ -107,8 +107,8 @@ if __name__ == '__main__':
 	num_epochs = 50
 	model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
 
-	test_example = list(test_data.take(1).unbatch().take(1))[0]
+	test_example = list(dataset.skip(5).take(1))[0]
+	# predict, as the same as fit, must take batches. Therefore, we must add a new dimension to the extracted features.
 	prediction = model.predict(tf.expand_dims(test_example[0], 0))[0]
-	prediction = tf.where(prediction > 0.5, tf.ones_like(prediction), tf.zeros_like(prediction)).numpy()
+	prediction = tf.where(prediction > 0.5, tf.ones_like(prediction, tf.int32), tf.zeros_like(prediction, tf.int32)).numpy()
 	print(f'prediction={prediction}, actual={test_example[1]}')
-	pass
