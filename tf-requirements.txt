@@ -1,6 +1,7 @@
 # This file may be used to create an environment using:
 # $ conda create --name <env> --file <this file>
 # platform: win-64
+# After installed, let PyCharm fully index the SDK before running.
 _tflow_select=2.1.0=gpu
 absl-py=0.11.0=py37haa95532_0
 aiohttp=3.6.3=py37he774522_0
