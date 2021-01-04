@@ -14,18 +14,19 @@ vocab_size = 126 - 32 + 1
 lr = 1e2
 clipping_theta = 1e-2
 batch_size = 20
+NUM_LABELS = 2
 
 
 def getLabel(file):
 	if 'add' in file.name:
-		return 0
+		return [1, 0]
 	# labels.append('add')
 	elif 'delete' in file.name:
-		return 1
+		return [0, 1]
 	# labels.append('delete')
 	elif 'both' in file.name:
 		# continue
-		return 2
+		return [1, 1]
 
 	raise Exception('Label not found')
 
@@ -71,14 +72,18 @@ def loadData():
 		assert len(sample) == num_steps
 	data = tf.convert_to_tensor(data)
 	assert data.shape[1] == num_steps
-
+	# todo: 用 tf.RaggedTensor
 	return tf.data.Dataset.from_tensor_slices((data, labels))
 
 
 if __name__ == '__main__':
 	dataset = loadData()
-	length = dataset.element_spec[0].shape[0]
-	print(f'loaded {length} data samples')
+	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
+	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a label vector of size {dataset.element_spec[1].shape[0]}. ' +
+		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.')
+
+	length = tf.data.experimental.cardinality(dataset).numpy()
+	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.")
 
 	maxEncoding = max([d[0].numpy().max() for d in dataset])
 
@@ -96,8 +101,14 @@ if __name__ == '__main__':
 	model = tf.keras.Sequential()
 	model.add(tf.keras.layers.Flatten())
 	model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
-	model.add(tf.keras.layers.Dense(3, activation='softmax'))
-	model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'], run_eagerly=True)
+	model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
+	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=True)
 
 	num_epochs = 50
 	model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
+
+	test_example = list(test_data.take(1).unbatch().take(1))[0]
+	prediction = model.predict(tf.expand_dims(test_example[0], 0))[0]
+	prediction = tf.where(prediction > 0.5, tf.ones_like(prediction), tf.zeros_like(prediction)).numpy()
+	print(f'prediction={prediction}, actual={test_example[1]}')
+	pass
