@@ -86,8 +86,12 @@ if __name__ == '__main__':
 
 	dataset = dataset.shuffle(length)
 	train_length = int(length / 5 * 4)
-	train_data = dataset.take(train_length).batch(batch_size)
-	test_data = dataset.skip(train_length).batch(batch_size)
+	train_data = dataset.take(train_length)
+	test_data = dataset.skip(train_length)
+	print(f"After shuffling the examples, let's use {tf.data.experimental.cardinality(train_data).numpy()} examples for training, {tf.data.experimental.cardinality(test_data).numpy()} for testing.")
+
+	train_data = train_data.batch(batch_size)
+	test_data = test_data.batch(batch_size)
 
 	model = tf.keras.Sequential()
 	model.add(tf.keras.layers.Flatten())
