@@ -1,3 +1,5 @@
+import timeit
+
 import tensorflow as tf
 
 import os
@@ -17,6 +19,8 @@ lr = 1e2
 clipping_theta = 1e-2
 batch_size = 20
 NUM_LABELS = 2
+MAX_LINE_LENGTH = 200
+MAX_LINES = 100
 
 
 def getLabel(file):
@@ -25,7 +29,8 @@ def getLabel(file):
 	# labels.append('add')
 	elif 'delete' in file.name:
 		return [0, 1]
-	# labels.append('delete')
+	elif 'remove' in file.name:
+		return [0, 1]
 	elif 'both' in file.name:
 		# continue
 		return [1, 1]
@@ -33,29 +38,53 @@ def getLabel(file):
 	raise Exception('Label not found')
 
 
+choppedLines = 0
+
+
+def cutAndPadLine(line, length):
+	global choppedLines
+	l = len(line)
+	if l < length:
+		# assert line[-1] == '\n'
+		# assert line[-2] != '\r'
+		# line = line[:-1] + ' ' * (length - l) + line[-1]
+		return line
+	else:
+		choppedLines += 1
+		return line[:length]
+
 
 def loadData(folder):
 	data = []
 	labels = []
+	vocaburary = set()
+	vocaburary.add(0)
+
+	max_line_length = 0
 	for diff in os.scandir(folder):
 		if diff.is_dir() or not diff.name.endswith('.diff'):
 			continue
 
 		with open(diff.path, 'r', encoding='utf-8') as f:
 			# 抛弃开头5行
-			for i in range(5):
-				f.readline()
+			# for i in range(5):
+			# 	f.readline()
 
-			sample = f.read()
-		# lines = f.readlines()
+			# sample = f.read()
+			lines = f.readlines()
+			if len(lines) >= MAX_LINES:
+				lines = lines[:MAX_LINES]
 
-		sample = [ord(c) for c in sample]
+			if max_line_length < MAX_LINE_LENGTH:
+				max_line_length = max(max_line_length, *[len(l) for l in lines])
 
-		lineCount = len(sample) // 22
-		assert len(sample) % 22 == 0, '输入必须是22的倍数，因为一行有22个字符。'
+		# sample = [ord(c) for c in sample]
 
-		for i in range(lineCount):
-			assert sample[i * 22 + 21] == ord('\n')
+		# lineCount = len(sample) // 22
+		# assert len(sample) % 22 == 0, '输入必须是22的倍数，因为一行有22个字符。'
+		#
+		# for i in range(lineCount):
+		# 	assert sample[i * 22 + 21] == ord('\n')
 
 		# 只看第一个字符
 		# firstColumn = [sample[i * 22] for i in list(range(lineCount))]
@@ -64,24 +93,43 @@ def loadData(folder):
 		labels.append(getLabel(diff))
 
 		# print([mapIndexToChar(c) for c in sample])
-		data.append(sample)
+		data.append(lines)
+	# vocaburary.update(set(sample))
+
+	if max_line_length > MAX_LINE_LENGTH:
+		max_line_length = MAX_LINE_LENGTH
+
+	data = [''.join([cutAndPadLine(l, max_line_length) for l in lines]) for lines in data]
+	print(f'{choppedLines} lines are longer than max lingth {MAX_LINE_LENGTH}, chopped.')
+
 	# 确保data中每个sample长度相同
-	num_steps = max([len(sample) for sample in data])
+	featureSize = max([len(sample) for sample in data])
 	for i in range(len(data)):
-		if len(data[i]) < num_steps:
-			data[i].extend([0] * (num_steps - len(data[i])))
-	for sample in data:
-		assert len(sample) == num_steps
+		if len(data[i]) < featureSize:
+			data[i] += (' ' * (featureSize - len(data[i])))
+	# for sample in data:
+	# 	assert len(sample) == featureSize
+	for example in data:
+		vocaburary.update(set(example))
+
+	conversionDict = {v: i for i, v in enumerate(list(vocaburary))}
+	assert conversionDict[0] == 0
+	data = [[conversionDict[c] for c in example] for example in data]
+
+	# print(f"convert_as_int32 numpy_array: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data, dtype=np.int32), tf.int32)).timeit(1)} s")
+	# print(f"convert_as_numpy_array: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data), tf.int32)).timeit(1)} s")
+	# print(f"convert_as_numpy_array no hint: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data))).timeit(1)} s")
+	# print(f"convert_as_list: {timeit.Timer(lambda: tf.convert_to_tensor(data, tf.int32)).timeit(1)} s")
 
 	data = np.asarray(data, np.int32)
 	data = tf.convert_to_tensor(data, tf.int32)
-	assert data.shape[1] == num_steps
+	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
 	return tf.data.Dataset.from_tensor_slices((data, labels))
 
 
 if __name__ == '__main__':
-	dataset = loadData(r'D:\renaming\data\generated')
+	dataset = loadData(r'D:\renaming\data\real\NewPipe')
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a label vector of size {dataset.element_spec[1].shape[0]}. ' +
 		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.')
@@ -111,6 +159,7 @@ if __name__ == '__main__':
 	model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
 
 	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
+	# model.summary()
 
 	num_epochs = 50
 	model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
