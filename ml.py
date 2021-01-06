@@ -2,6 +2,7 @@ import tensorflow as tf
 
 import os
 import sys
+import numpy as np
 
 try:
 	tf.__version__
@@ -40,7 +41,7 @@ def loadData(folder):
 		if diff.is_dir() or not diff.name.endswith('.diff'):
 			continue
 
-		with open(diff.path, 'r') as f:
+		with open(diff.path, 'r', encoding='utf-8') as f:
 			# 抛弃开头5行
 			for i in range(5):
 				f.readline()
@@ -71,6 +72,8 @@ def loadData(folder):
 			data[i].extend([0] * (num_steps - len(data[i])))
 	for sample in data:
 		assert len(sample) == num_steps
+
+	data = np.asarray(data, np.int32)
 	data = tf.convert_to_tensor(data, tf.int32)
 	assert data.shape[1] == num_steps
 	# todo: 用 tf.RaggedTensor
@@ -87,6 +90,9 @@ if __name__ == '__main__':
 	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.")
 
 	maxEncoding = max([d[0].numpy().max() for d in dataset])
+	print(f'Max encoding is {maxEncoding}.')
+
+	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.')
 
 	dataset = dataset.map(lambda x, y: (tf.one_hot(x, maxEncoding), y))
 
