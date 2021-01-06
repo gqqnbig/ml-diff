@@ -71,7 +71,7 @@ def loadData(folder):
 			data[i].extend([0] * (num_steps - len(data[i])))
 	for sample in data:
 		assert len(sample) == num_steps
-	data = tf.convert_to_tensor(data)
+	data = tf.convert_to_tensor(data, tf.int32)
 	assert data.shape[1] == num_steps
 	# todo: 用 tf.RaggedTensor
 	return tf.data.Dataset.from_tensor_slices((data, labels))
