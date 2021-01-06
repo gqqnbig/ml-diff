@@ -21,7 +21,7 @@ def getChangeType(diffContent: str):
 	if hasAdd:
 		return 'add'
 	if hasRemove:
-		return 'remove'
+		return 'delete'
 
 	raise Exception('No change in diff.')
 
