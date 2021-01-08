@@ -14,7 +14,7 @@ def findDifferenceStart(str1, str2, start):
 	return shortestLength
 
 
-def createLabels(file):
+def createLabels(file: str):
 	with open(file, 'r', encoding='utf-8') as f:
 		lines = f.readlines()
 		if type(f.newlines) is tuple and len(f.newlines) > 1:
@@ -22,6 +22,8 @@ def createLabels(file):
 
 		if f.newlines != '\n':
 			raise Exception('Currently, only Linux line ending (\\n) is supported.')
+
+	rearrangeBalancedAddRemove(lines, file)
 
 	removedLines = len(list(filter(lambda l: l[0] == '-', lines)))
 	addedLines = len(list(filter(lambda l: l[0] == '+', lines)))
@@ -45,6 +47,37 @@ def createLabels(file):
 		currentOffset += len(line)
 
 	return labels
+
+
+def rearrangeBalancedAddRemove(lines: list, file):
+	isRearranged = False
+	removeCount = 0
+	addCount = 0
+	for i in range(len(lines)):
+		if lines[i][0] == '-':
+			removeCount += 1
+			addCount = 0
+		elif lines[i][0] == '+':
+			addCount += 1
+		else:
+			if removeCount == addCount and removeCount > 1:
+				# the change is balanced, rearrange the lines to interleave minus and plus.
+				removeStart = i - addCount - removeCount
+				for j in range(removeCount - 1):
+					# find add for remove at line removeStart+j*2, ie. j-th remove
+					# the add for j-th remove is at removeStart+j+removeCount
+
+					lines.insert(removeStart + j * 2 + 1, lines[removeStart + j + removeCount])
+					del lines[removeStart + j + removeCount + 1]
+
+				isRearranged = True
+
+			removeCount = 0
+			addCount = 0
+
+	if isRearranged:
+		with open(file, 'w', encoding='utf-8', newline='\n') as f:
+			f.writelines(lines)
 
 
 def getWord(content: str, index):
