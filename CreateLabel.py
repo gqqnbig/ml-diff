@@ -78,6 +78,7 @@ def rearrangeBalancedAddRemove(lines: list, file):
 	if isRearranged:
 		with open(file, 'w', encoding='utf-8', newline='\n') as f:
 			f.writelines(lines)
+		print(f'rearrange diff {file}')
 
 
 def getWord(content: str, index):
