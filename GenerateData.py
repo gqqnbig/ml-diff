@@ -1,4 +1,3 @@
-import mxnet as mx
 import os
 import os.path
 import random
