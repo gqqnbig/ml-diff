@@ -44,7 +44,7 @@ if __name__ == '__main__':
 			print('reach root commit')
 			break
 
-		changedFiles = commit.diff(commit.parents[0], create_patch=True)
+		changedFiles = commit.parents[0].diff(commit, create_patch=True)
 		for i in range(len(changedFiles)):
 			diff = changedFiles[i]
 			if diff.a_path and diff.b_path and diff.a_path.lower().endswith('.java'):
