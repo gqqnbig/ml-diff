@@ -2,33 +2,32 @@ import os
 
 from git import Repo
 
-
-def getChangeType(diffContent: str):
-	"""
-	Find out if the diff content has added lines, removed lines, or both
-
-	:param diffContent:
-	:return: 'add', 'remove', 'both'
-	"""
-
-	lines = diffContent.splitlines()
-	firsts = [line[0] for line in lines]
-
-	hasAdd = '+' in firsts
-	hasRemove = '-' in firsts
-	if hasAdd and hasRemove:
-		return 'both'
-	if hasAdd:
-		return 'add'
-	if hasRemove:
-		return 'delete'
-
-	raise Exception('No change in diff.')
+# def getChangeType(diffContent: str):
+# 	"""
+# 	Find out if the diff content has added lines, removed lines, or both
+#
+# 	:param diffContent:
+# 	:return: 'add', 'remove', 'both'
+# 	"""
+#
+# 	lines = diffContent.splitlines()
+# 	firsts = [line[0] for line in lines]
+#
+# 	hasAdd = '+' in firsts
+# 	hasRemove = '-' in firsts
+# 	if hasAdd and hasRemove:
+# 		return 'both'
+# 	if hasAdd:
+# 		return 'add'
+# 	if hasRemove:
+# 		return 'delete'
+#
+# 	raise Exception('No change in diff.')
 
 
 if __name__ == '__main__':
-	repoPath = r'D:\renaming\data\github\NewPipe'
-	diffFolder = r'D:\renaming\data\real\NewPipe'
+	repoPath = r'D:\renaming\data\github\baritone'
+	diffFolder = r'D:\renaming\data\real\baritone'
 	if not os.path.exists(diffFolder):
 		os.makedirs(diffFolder)
 
@@ -38,14 +37,24 @@ if __name__ == '__main__':
 	repo = Repo(repoPath)
 
 	max_count = None
-	for commit in repo.iter_commits('dev', max_count=max_count, first_parent=True):
-		print(commit.hexsha)
+	# first_parent=False because repositories often use pull-request pattern that the first parent often aggregates many changes.
+	for commit in repo.iter_commits('master', max_count=max_count, first_parent=False):
 		if len(commit.parents) == 0:
-			print('reach root commit')
+			print(f'reach root commit {commit.hexsha}')
 			break
+		if len(commit.parents) == 2:
+			print(f'Ignore merge commit {commit.hexsha}')
+			continue
+		print(commit.hexsha)
 
 		changedFiles = commit.parents[0].diff(commit, create_patch=True)
+		# files = list(filter(lambda diff: diff.a_path and diff.b_path and diff.a_path.lower().endswith('.java') and len(diff.diff) > 0, changedFiles))
+		# if len(files) == 1:
+		# for simplicity, ignore commits that changes multiple files
+
+		content = ''
 		for i in range(len(changedFiles)):
+			# try:
 			diff = changedFiles[i]
 			if diff.a_path and diff.b_path and diff.a_path.lower().endswith('.java'):
 				# create_patch must be True to get diff.diff
@@ -54,11 +63,18 @@ if __name__ == '__main__':
 
 				print(diff.a_path)
 
-				content = diff.diff.decode(errors='ignore')
+				content += diff.diff.decode(errors='ignore')
+			# except UnicodeDecodeError as e:
+			# 	print(e)
 
-				try:
-					diffFileName = f'{commit.hexsha}-{i}-{getChangeType(content)}.diff'
-					with open(os.path.join(diffFolder, diffFileName), 'w', encoding='utf-8') as f:
-						f.write(content)
-				except Exception as e:
-					print(str(e) + ' Possibly a file renaming.')
+		if len(content) > 0:
+			# if '\r\n' in content:
+			content = content.replace('\r\n', '\n')
+			# raise Exception('Currently, only Linux line ending (\\n) is supported.')
+
+			# try:
+			diffFileName = f'{commit.hexsha}.diff'
+			with open(os.path.join(diffFolder, diffFileName), 'w', encoding='utf-8', newline='\n') as f:
+				f.write(content)
+		# except Exception as e:
+		# 	print(str(e) + ' Possibly a file renaming.')
