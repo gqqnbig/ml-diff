@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
 				print(diff.a_path)
 
-				content = diff.diff.decode()
+				content = diff.diff.decode(errors='ignore')
 
 				try:
 					diffFileName = f'{commit.hexsha}-{i}-{getChangeType(content)}.diff'
