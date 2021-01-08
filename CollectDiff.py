@@ -50,7 +50,7 @@ if __name__ == '__main__':
 			if diff.a_path and diff.b_path and diff.a_path.lower().endswith('.java'):
 				# create_patch must be True to get diff.diff
 				if len(diff.diff) == 0:
-					pass
+					continue
 
 				print(diff.a_path)
 
