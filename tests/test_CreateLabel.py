@@ -14,15 +14,15 @@ def testIsIdentifierRenaming():
 		if diff.is_dir() or not diff.name.endswith('.diff'):
 			continue
 
-		result = CreateLabel.isIdentifierRenaming(diff.path)
-		if result is None:
-			pytest.fail(f'Fail to find renaming in {diff.name}')
-
-		renamingMappings = result[1]
-		parts = diff.name.split('-')
+		result = CreateLabel.createLabels(diff.path)
+		parts = os.path.splitext(diff.name)[0].split('-')
 
 		description = parts[0]
-		oldName = parts[1]
-		newName = parts[2]
+		if len(parts) > 1:
+			oldName = parts[1]
+			newName = parts[2]
 
-		assert oldName in renamingMappings, f'Case {description} failed.'
+			assert result[oldName] == newName, f'Case {description} failed.'
+		else:
+			if result is not None:
+				pytest.fail(f'Fail to identify "{description}" as not renaming. Actual: {result}')
