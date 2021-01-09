@@ -1,0 +1,16 @@
+@@ -2,10 +2,10 @@
+ 
+ public class Program {
+     public static void main(String[] args) {
+-        int b = 10;
++        int a = 10;
+-        System.out.println(b * 2);
++        System.out.println(a * 2);
+-        System.out.println(b + 2);
++        System.out.println(a + 2);
+-        System.out.println(b ^ 2);
++        System.out.println(a ^ 2);
+-        System.out.println(b / 2);
++        System.out.println(a / 2);
+     }
+ }

@@ -1,5 +1,6 @@
 import os
 import re
+from typing import List, Tuple, Optional
 
 
 def findDifferenceStart(str1, str2, start):
@@ -82,6 +83,12 @@ def rearrangeBalancedAddRemove(lines: list, file):
 
 
 def getWord(content: str, index):
+	"""
+
+	:param content:
+	:param index:
+	:return: return None if the given index is not a word. Otherwise return the word
+	"""
 	assert index >= 0
 
 	end = None
@@ -109,37 +116,48 @@ def getWord(content: str, index):
 	if start is None or end is None or start >= end:
 		return None
 
-	return content[start:end]
+	if start <= index <= end:
+		return content[start:end]
+	else:
+		return None
 
 
-def isIdentifierRenaming(diffFile: str):
+def isIdentifierRenaming(diffFile: str) -> Optional[Tuple[List[int], List[str]]]:
 	possibleLabels = createLabels(diffFile)
 
 	with open(diffFile, 'r', encoding='utf-8') as f:
 		content = f.read()
 
-	changedWords = set(filter(lambda item: item is not None, [getWord(content, i) for i in possibleLabels]))
-	if len(changedWords) == 1:
+	changedWords = list(set([getWord(content, i) for i in possibleLabels]))
+	if len(changedWords) == 1 and changedWords[0] is not None:
 		print(changedWords)
-		return possibleLabels
+		return possibleLabels, changedWords
 	else:
-		return []
+		return None
 
 
 if __name__ == '__main__':
-	folder = r'D:\renaming\data\real\baritone'
-	labelFile = r'D:\renaming\data\real\baritone.txt'
+	# isIdentifierRenaming(r'D:\renaming\data\real\AntennaPod\164ca08123646bfa8664c9eb8492ecb107e22bc6.diff')
+	#
+	# exit()
+	folder = r'D:\renaming\data\real\AntennaPod'
+	labelFile = r'D:\renaming\data\real\AntennaPod.txt'
 
 	with open(labelFile, 'w', encoding='utf-8') as labelFile:
 		for diff in os.scandir(folder):
 			if diff.is_dir() or not diff.name.endswith('.diff'):
 				continue
 
-			labels = isIdentifierRenaming(diff.path)
-			if len(labels) > 1:
-				# 1 place to change definition, other places to change references
-				labelFile.write(diff.name[0:-len('.diff')])
-				labelFile.write('|')
-				labelFile.write(str(labels)[1:-1])
-				labelFile.write('|')
-				labelFile.write('\n')
+			try:
+				result = isIdentifierRenaming(diff.path)
+				if result is not None:
+					labels = result[0]
+					if len(labels) > 1:
+						# 1 place to change definition, other places to change references
+						labelFile.write(diff.name[0:-len('.diff')])
+						labelFile.write('|')
+						labelFile.write(str(labels)[1:-1])
+						labelFile.write('|')
+						labelFile.write('\n')
+			except Exception as e:
+				print(diff.path + " has error:" + str(e))
