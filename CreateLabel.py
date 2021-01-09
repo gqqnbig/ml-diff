@@ -82,11 +82,32 @@ def rearrangeBalancedAddRemove(lines: list, file):
 
 
 def getWord(content: str, index):
-	m = re.search(r'\w\b', content[index:])
-	if m is None:
+	end = None
+	for i in range(index, len(content)):
+		# doesn't consider unicode characters for now.
+		if content[i].isalnum() or content[i] == '_':
+			continue
+		else:
+			end = i
+			break
+
+	start = None
+	for i in range(index - 1, 0, -1):
+		# doesn't consider unicode characters for now.
+		if content[i].isalnum() or content[i] == '_':
+			continue
+		else:
+			start = i + 1
+			break
+
+	if start is not None:
+		while content[start].isnumeric():
+			start += 1
+
+	if start is None or end is None:
 		return None
-	else:
-		return content[index:index + m.end()]
+
+	return content[start:end]
 
 
 def isIdentifierRenaming(diffFile):
