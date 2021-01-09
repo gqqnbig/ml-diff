@@ -29,10 +29,10 @@ def createLabels(file: str):
 	removedLines = len(list(filter(lambda l: l[0] == '-', lines)))
 	addedLines = len(list(filter(lambda l: l[0] == '+', lines)))
 	if removedLines != addedLines:
-		return []
+		return None
 
-	labels = []
-	currentOffset = 0
+	labels = {}
+	# currentOffset = 0
 	removedLine = None
 	for line in lines:
 		if line[0] == ' ':
@@ -42,10 +42,25 @@ def createLabels(file: str):
 		elif line[0] == '+':
 			if removedLine is not None:
 				d = findDifferenceStart(line, removedLine, 1)
-				labels.append(currentOffset - len(removedLine) + d)
+
+				oldWord = getWord(removedLine, d)
+				newWord = getWord(line, d)
+
+				if oldWord is None or newWord is None:
+					return None
+				if oldWord == newWord:
+					return None
+
+				if oldWord in labels:
+					if labels[oldWord] != newWord:
+						return None
+				else:
+					labels[oldWord] = newWord
+
+				# labels.append(currentOffset - len(removedLine) + d)
 				removedLine = None
 
-		currentOffset += len(line)
+	# currentOffset += len(line)
 
 	return labels
 
@@ -122,18 +137,18 @@ def getWord(content: str, index):
 		return None
 
 
-def isIdentifierRenaming(diffFile: str) -> Optional[Tuple[List[int], List[str]]]:
-	possibleLabels = createLabels(diffFile)
-
-	with open(diffFile, 'r', encoding='utf-8') as f:
-		content = f.read()
-
-	changedWords = list(set([getWord(content, i) for i in possibleLabels]))
-	if len(changedWords) == 1 and changedWords[0] is not None:
-		print(changedWords)
-		return possibleLabels, changedWords
-	else:
-		return None
+# def isIdentifierRenaming(diffFile: str) -> Optional[Tuple[List[int], List[str]]]:
+# 	possibleLabels = createLabels(diffFile)
+#
+# 	with open(diffFile, 'r', encoding='utf-8') as f:
+# 		content = f.read()
+#
+# 	changedWords = list(set([getWord(content, i) for i in possibleLabels]))
+# 	if len(changedWords) == 1 and changedWords[0] is not None:
+# 		print(changedWords)
+# 		return possibleLabels, changedWords
+# 	else:
+# 		return None
 
 
 if __name__ == '__main__':
@@ -148,16 +163,29 @@ if __name__ == '__main__':
 			if diff.is_dir() or not diff.name.endswith('.diff'):
 				continue
 
-			try:
-				result = isIdentifierRenaming(diff.path)
-				if result is not None:
-					labels = result[0]
-					if len(labels) > 1:
-						# 1 place to change definition, other places to change references
-						labelFile.write(diff.name[0:-len('.diff')])
-						labelFile.write('|')
-						labelFile.write(str(labels)[1:-1])
-						labelFile.write('|')
-						labelFile.write('\n')
-			except Exception as e:
-				print(diff.path + " has error:" + str(e))
+			labels = createLabels(diff.path)
+			if labels is not None:
+				labelFile.write(diff.name[0:-len('.diff')])
+				labelFile.write('|')
+				# labelFile.write(str(labels)[1:-1])
+				labelFile.write('|')
+				if len(labels) > 0:
+					labelFile.write('y')
+					labelFile.write('|' + ', '.join([k + "->" + v for k, v in labels.items()]))
+				else:
+					labelFile.write('n')
+
+				labelFile.write('\n')
+# try:
+# 	result = isIdentifierRenaming(diff.path)
+# 	if result is not None:
+# 		labels = result[0]
+# 		# if len(labels) > 1:
+# 		# 1 place to change definition, other places to change references
+# 		labelFile.write(diff.name[0:-len('.diff')])
+# 		labelFile.write('|')
+# 		labelFile.write(str(labels)[1:-1])
+# 		labelFile.write('|')
+# 		labelFile.write('\n')
+# except Exception as e:
+# 	print(diff.path + " has error:" + str(e))
