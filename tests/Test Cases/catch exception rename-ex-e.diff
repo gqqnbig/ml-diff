@@ -1,0 +1,11 @@
+@@ -9,8 +9,8 @@ public class ReadAndPrintScores {
+             while (s.hasNextInt()) {
+                 System.out.println(s.nextInt());
+             }
+-        } catch (IOException ex) {
++        } catch (IOException e) {
+-            System.out.println(ex);
++            System.out.println(e);
+         }
+     }
+ }
