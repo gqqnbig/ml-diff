@@ -2,6 +2,7 @@ import os
 import re
 import random
 import io
+import subprocess
 
 import CreateLabel
 
@@ -18,10 +19,12 @@ def replaceWordAt(line, index, newWord):
 
 
 def getPairs(list):
-	for i in range(len(list)):
-		for j in range(i, len(list)):
-			if list[i] != list[j]:
-				yield list[i], list[j]
+	l = len(list)
+	while True:
+		i = random.randint(0, l)
+		j = random.randint(0, l)
+		if i != j:
+			yield list[i], list[j]
 
 
 def getWordStart(content: str, index):
@@ -70,8 +73,12 @@ def getVocabulary(content):
 		content.seek(0)
 		content = content.read()
 
-	matches = re.findall(r'\b[a-z][\w_]*\b', content, re.IGNORECASE)
+	matches = re.findall(r'\b[a-z_][\w_]*\b', content, re.IGNORECASE)
 	return {m for m in matches if m not in CreateLabel.java_keywords}
+
+
+def isLowerOrUnderscore(n: str):
+	return n.islower() or n == '_'
 
 
 def spawnFromTemplate(file: str, vocabulary: set, count):
@@ -86,8 +93,8 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 		vocabulary = vocabulary.difference(getVocabulary(''.join(lines)))
 
 	voc = list(vocabulary)
-	random.shuffle(voc)
-	renamingPairs = [x for _, x in zip(range(count), getPairs(voc))]
+	# random.shuffle(voc)
+	renamingPairs = getPairs(voc)
 
 	CreateLabel.rearrangeBalancedAddRemove(lines, file)
 
@@ -95,7 +102,7 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 	addedLines = len(list(filter(lambda l: l[0] == '+', lines)))
 	assert removedLines == addedLines
 
-	for i in range(len(renamingPairs)):
+	for i in range(count):
 		newLines = lines.copy()
 		removedLine = False
 		for j in range(len(newLines)):
@@ -110,8 +117,17 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 
 					d = getWordStart(newLines[j], d)
 
-					newLines[j - 1] = replaceWordAt(newLines[j - 1], d, renamingPairs[i][0])
-					newLines[j] = replaceWordAt(newLines[j], d, renamingPairs[i][1])
+					while True:
+						pair = next(renamingPairs)
+						if pair is None:
+							# vocabulary is exhausted.
+							return
+						if (newLines[j - 1][d].isupper() and pair[0][0].isupper() or isLowerOrUnderscore(newLines[j - 1][d]) and isLowerOrUnderscore(pair[0][0])) and \
+								(newLines[j][d].isupper() and pair[1][0].isupper() or isLowerOrUnderscore(newLines[j][d]) and isLowerOrUnderscore(pair[1][0])):
+							break
+
+					newLines[j - 1] = replaceWordAt(newLines[j - 1], d, pair[0])
+					newLines[j] = replaceWordAt(newLines[j], d, pair[1])
 
 					removedLine = False
 
@@ -152,7 +168,52 @@ def collectVocabulary(vocabularyFile, dirs):
 
 
 if __name__ == '__main__':
-	# collectVocabulary(r'vocabularyFile.txt', [r'D:\renaming\data\real\AntennaPod', r'D:\renaming\data\real\baritone', r'D:\renaming\data\real\camel', r'D:\renaming\data\real\NewPipe'])
+	vocabularyFile = r'vocabularyFile.txt'
+	collectVocabulary(vocabularyFile, [r'D:\renaming\data\real\AntennaPod', r'D:\renaming\data\real\baritone', r'D:\renaming\data\real\camel', r'D:\renaming\data\real\NewPipe'])
+	exit()
+
+	with open(vocabularyFile, 'r', encoding='utf-8') as f:
+		vocabulary = set(f.read().splitlines())
+
+	rawChangeCount = 10
+
+	# spawnFromTemplate(r'D:\renaming\data\generated\dd\AirlineProblem-9.diff', vocabulary, 10)
+	# exit()
+
+	outputDir = r'D:\renaming\data\generated\dd'
+
+	for file in os.scandir(r'D:\renaming\data\generated\original'):
+		if file.is_dir() or not file.name.endswith('.java'):
+			continue
+
+		previousDiffs = []
+		print(f'Open {file.name}.')
+		for pass_ in range(rawChangeCount):
+			print(f'You will need to modify {rawChangeCount - pass_} more times.')
+
+			diffFilePath = os.path.join(outputDir, os.path.splitext(file.name)[0] + '-' + str(pass_) + '.diff')
+			userInput = input('When you are done with renaming, remember save the file. Press s to skip, n to stop, anything else to continue.')
+			if userInput == 's':
+				print(f'{diffFilePath} is untouched.')
+				continue
+			elif userInput == 'n':
+				break
+
+			diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
+			while diff in previousDiffs:
+				input('This modification is the same as one of previous ones. Please try again. Press enter.')
+				diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
+
+			lines = diff.splitlines(True)
+
+			with open(diffFilePath, 'w', encoding='utf-8', newline='\n') as f:
+				f.writelines(lines[4:])
+
+			spawnFromTemplate(diffFilePath, vocabulary, 10)
+
+			subprocess.run(f'git checkout {file.name}', cwd=r'D:\renaming\data\generated\original', stderr=subprocess.DEVNULL)
+
+			print('Good job. Diff registered. File is reverted.')
 
 # spawnFromTemplate(r'D:\renaming\neural network\tests\Test Cases\catch exception rename-ex-e.diff', vocabulary, 10)
 
