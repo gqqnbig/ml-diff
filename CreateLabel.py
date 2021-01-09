@@ -82,6 +82,8 @@ def rearrangeBalancedAddRemove(lines: list, file):
 
 
 def getWord(content: str, index):
+	assert index >= 0
+
 	end = None
 	for i in range(index, len(content)):
 		# doesn't consider unicode characters for now.
@@ -101,10 +103,10 @@ def getWord(content: str, index):
 			break
 
 	if start is not None:
-		while content[start].isnumeric():
+		while start < len(content) and content[start].isnumeric():
 			start += 1
 
-	if start is None or end is None:
+	if start is None or end is None or start >= end:
 		return None
 
 	return content[start:end]
