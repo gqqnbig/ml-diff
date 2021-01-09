@@ -112,15 +112,15 @@ def getWord(content: str, index):
 	return content[start:end]
 
 
-def isIdentifierRenaming(diffFile):
+def isIdentifierRenaming(diffFile: str):
 	possibleLabels = createLabels(diffFile)
 
 	with open(diffFile, 'r', encoding='utf-8') as f:
 		content = f.read()
 
-	changedWords = [getWord(content, i) for i in possibleLabels]
-	print(changedWords)
-	if len(set(changedWords)) == 1:
+	changedWords = set(filter(lambda item: item is not None, [getWord(content, i) for i in possibleLabels]))
+	if len(changedWords) == 1:
+		print(changedWords)
 		return possibleLabels
 	else:
 		return []
