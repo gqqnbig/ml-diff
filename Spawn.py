@@ -27,6 +27,36 @@ def getPairs(list):
 			yield list[i], list[j]
 
 
+def getWordEnd(content: str, index):
+	"""
+
+	:param content:
+	:param index:
+	:return: return None if the given index is not a word. Otherwise return the word
+	"""
+	assert index >= 0
+
+	# end = None
+	# for i in range(index, len(content)):
+	# 	# doesn't consider unicode characters for now.
+	# 	if content[i].isalnum() or content[i] == '_':
+	# 		continue
+	# 	else:
+	# 		end = i
+	# 		break
+
+	for i in range(index, len(content) + 1):
+		if i == len(content):
+			return i
+		# doesn't consider unicode characters for now.
+		elif content[i].isalnum() or content[i] == '_':
+			continue
+		else:
+			return i
+
+	raise Exception()
+
+
 def getWordStart(content: str, index):
 	"""
 
@@ -116,6 +146,11 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 				if removedLine:
 					d = CreateLabel.findDifferenceStart(newLines[j], newLines[j - 1], 1)
 					# go backwards to find the start of the word
+
+					e1 = getWordEnd(newLines[j], d)
+					e2 = getWordEnd(newLines[j - 1], d)
+					if newLines[j][e1:] != newLines[j - 1][e2:]:
+						raise NotImplementedError('In a single line, more than 1 place is changed, which is not supported!')
 
 					d = getWordStart(newLines[j], d)
 
