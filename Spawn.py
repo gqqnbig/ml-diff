@@ -103,8 +103,10 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 	assert removedLines == addedLines
 
 	for i in range(count):
+		pair = next(renamingPairs)
 		newLines = lines.copy()
 		removedLine = False
+		isPairVerified = False
 		for j in range(len(newLines)):
 			if newLines[j][0] == ' ':
 				pass
@@ -117,14 +119,20 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 
 					d = getWordStart(newLines[j], d)
 
+					if d >= len(newLines[j]) or d >= len(newLines[j - 1]):
+						continue
+
 					while True:
-						pair = next(renamingPairs)
 						if pair is None:
 							# vocabulary is exhausted.
 							return
 						if (newLines[j - 1][d].isupper() and pair[0][0].isupper() or isLowerOrUnderscore(newLines[j - 1][d]) and isLowerOrUnderscore(pair[0][0])) and \
 								(newLines[j][d].isupper() and pair[1][0].isupper() or isLowerOrUnderscore(newLines[j][d]) and isLowerOrUnderscore(pair[1][0])):
+							isPairVerified = True
 							break
+						else:
+							assert isPairVerified == False
+							pair = next(renamingPairs)
 
 					newLines[j - 1] = replaceWordAt(newLines[j - 1], d, pair[0])
 					newLines[j] = replaceWordAt(newLines[j], d, pair[1])
