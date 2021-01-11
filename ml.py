@@ -24,18 +24,18 @@ MAX_LINES = 100
 
 
 def getLabel(file):
-	if 'add' in file.name:
+	if 'add' in file:
 		return [1, 0]
 	# labels.append('add')
-	elif 'delete' in file.name:
+	elif 'delete' in file:
 		return [0, 1]
-	elif 'remove' in file.name:
+	elif 'remove' in file:
 		return [0, 1]
-	elif 'both' in file.name:
+	elif 'both' in file:
 		# continue
 		return [1, 1]
 
-	raise Exception('Label not found')
+	raise Exception(f'Label not found for file {file}')
 
 
 choppedLines = 0
@@ -61,39 +61,53 @@ def loadData(folder):
 	vocaburary.add(0)
 
 	max_line_length = 0
+
+	inputFiles = []
 	for diff in os.scandir(folder):
 		if diff.is_dir() or not diff.name.endswith('.diff'):
 			continue
 
-		with open(diff.path, 'r', encoding='utf-8') as f:
-			# 抛弃开头5行
-			# for i in range(5):
-			# 	f.readline()
+		inputFiles.append(diff.path)
 
-			# sample = f.read()
-			lines = f.readlines()
-			if len(lines) >= MAX_LINES:
-				lines = lines[:MAX_LINES]
+	inputFiles=['a','b']
+	dataset = tf.data.Dataset.from_tensor_slices(inputFiles)
+	dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
-			if max_line_length < MAX_LINE_LENGTH:
-				max_line_length = max(max_line_length, *[len(l) for l in lines])
 
-		# sample = [ord(c) for c in sample]
+	dataset = tf.data.Dataset.from_tensor_slices(inputFiles)
+	getLabel(next(iter(dataset)).numpy())
+	dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
-		# lineCount = len(sample) // 22
-		# assert len(sample) % 22 == 0, '输入必须是22的倍数，因为一行有22个字符。'
-		#
-		# for i in range(lineCount):
-		# 	assert sample[i * 22 + 21] == ord('\n')
+	with open(diff.path, 'r', encoding='utf-8') as f:
+		# 抛弃开头5行
+		# for i in range(5):
+		# 	f.readline()
 
-		# 只看第一个字符
-		# firstColumn = [sample[i * 22] for i in list(range(lineCount))]
-		# sample = firstColumn
+		# sample = f.read()
+		lines = f.readlines()
+		if len(lines) >= MAX_LINES:
+			lines = lines[:MAX_LINES]
 
-		labels.append(getLabel(diff))
+		if max_line_length < MAX_LINE_LENGTH:
+			max_line_length = max(max_line_length, *[len(l) for l in lines])
 
-		# print([mapIndexToChar(c) for c in sample])
-		data.append(lines)
+	# sample = [ord(c) for c in sample]
+
+	# lineCount = len(sample) // 22
+	# assert len(sample) % 22 == 0, '输入必须是22的倍数，因为一行有22个字符。'
+	#
+	# for i in range(lineCount):
+	# 	assert sample[i * 22 + 21] == ord('\n')
+
+	# 只看第一个字符
+	# firstColumn = [sample[i * 22] for i in list(range(lineCount))]
+	# sample = firstColumn
+
+	labels.append(getLabel(diff))
+
+	# print([mapIndexToChar(c) for c in sample])
+	data.append(lines)
+
 	# vocaburary.update(set(sample))
 
 	if max_line_length > MAX_LINE_LENGTH:
