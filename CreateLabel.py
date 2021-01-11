@@ -15,6 +15,62 @@ def findDifferenceStart(str1, str2, start):
 	return shortestLength
 
 
+java_keywords = {"abstract",
+				 "assert",
+				 "boolean",
+				 "break",
+				 "byte",
+				 "case",
+				 "catch",
+				 "char",
+				 "class",
+				 "const",
+				 "continue",
+				 "default",
+				 "do",
+				 "double",
+				 "else",
+				 "enum",
+				 "extends",
+				 "false",
+				 "final",
+				 "finally",
+				 "float",
+				 "for",
+				 "goto",
+				 "if",
+				 "implements",
+				 "import",
+				 "instanceof",
+				 "int",
+				 "interface",
+				 "long",
+				 "native",
+				 "new",
+				 "null",
+				 "package",
+				 "private",
+				 "protected",
+				 "public",
+				 "return",
+				 "short",
+				 "static",
+				 "strictfp",
+				 "super",
+				 "switch",
+				 "synchronized",
+				 "this",
+				 "throw",
+				 "throws",
+				 "transient",
+				 "true",
+				 "try",
+				 "void",
+				 "volatile",
+				 "while",
+				 }
+
+
 def createLabels(file: str):
 	with open(file, 'r', encoding='utf-8') as f:
 		lines = f.readlines()
@@ -49,6 +105,8 @@ def createLabels(file: str):
 				if oldWord is None or newWord is None:
 					return None
 				if oldWord == newWord:
+					return None
+				if oldWord in java_keywords or newWord in java_keywords:
 					return None
 
 				if oldWord in labels:
@@ -152,9 +210,9 @@ def getWord(content: str, index):
 
 
 if __name__ == '__main__':
-	# isIdentifierRenaming(r'D:\renaming\data\real\AntennaPod\164ca08123646bfa8664c9eb8492ecb107e22bc6.diff')
-	#
-	# exit()
+	createLabels(r'D:\renaming\data\real\AntennaPod\0499ef60ac7122dfad8c1579327c72eaca37cde9.diff')
+
+	exit()
 	folder = r'D:\renaming\data\real\AntennaPod'
 	labelFile = r'D:\renaming\data\real\AntennaPod.txt'
 
@@ -169,9 +227,18 @@ if __name__ == '__main__':
 				labelFile.write('|')
 				# labelFile.write(str(labels)[1:-1])
 				labelFile.write('|')
-				if len(labels) > 0:
+
+				s = ', '.join([k + "->" + v for k, v in labels.items()])
+				if 0 < len(labels) <= 2:
 					labelFile.write('y')
-					labelFile.write('|' + ', '.join([k + "->" + v for k, v in labels.items()]))
+
+					print(diff.name + ": " + s)
+					labelFile.write('|' + s)
+				elif len(labels) > 2:
+					labelFile.write('skip')
+
+					print(diff.name + ": " + s)
+					labelFile.write('|' + s)
 				else:
 					labelFile.write('n')
 

@@ -26,8 +26,8 @@ from git import Repo
 
 
 if __name__ == '__main__':
-	repoPath = r'D:\renaming\data\github\baritone'
-	diffFolder = r'D:\renaming\data\real\baritone'
+	repoPath = r'D:\renaming\data\github\camel'
+	diffFolder = r'D:\renaming\data\real\camel'
 	if not os.path.exists(diffFolder):
 		os.makedirs(diffFolder)
 
@@ -64,17 +64,17 @@ if __name__ == '__main__':
 				print(diff.a_path)
 
 				content += diff.diff.decode(errors='ignore')
-			# except UnicodeDecodeError as e:
-			# 	print(e)
+		# except UnicodeDecodeError as e:
+		# 	print(e)
 
 		if len(content) > 0:
 			# if '\r\n' in content:
-			content = content.replace('\r\n', '\n')
+			content = content.replace('\r\n', '\n').replace('\r', '\n')
 			# raise Exception('Currently, only Linux line ending (\\n) is supported.')
 
 			# try:
 			diffFileName = f'{commit.hexsha}.diff'
 			with open(os.path.join(diffFolder, diffFileName), 'w', encoding='utf-8', newline='\n') as f:
 				f.write(content)
-		# except Exception as e:
-		# 	print(str(e) + ' Possibly a file renaming.')
+	# except Exception as e:
+	# 	print(str(e) + ' Possibly a file renaming.')
