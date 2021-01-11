@@ -18,22 +18,18 @@ vocab_size = 126 - 32 + 1
 lr = 1e2
 clipping_theta = 1e-2
 batch_size = 20
-NUM_LABELS = 2
+NUM_LABELS = 1
 MAX_LINE_LENGTH = 200
 MAX_LINES = 100
 
 
 def getLabel(file):
-	if 'add' in file:
-		return [1, 0]
-	# labels.append('add')
-	elif 'delete' in file:
-		return [0, 1]
-	elif 'remove' in file:
-		return [0, 1]
-	elif 'both' in file:
-		# continue
-		return [1, 1]
+	file = os.path.normpath(file)
+	components = file.split(os.sep)
+	if components[-2] == 'yes':
+		return 1
+	elif components[-2] == 'no':
+		return 0
 
 	raise Exception(f'Label not found for file {file}')
 
@@ -54,75 +50,44 @@ def cutAndPadLine(line, length):
 		return line[:length]
 
 
-def loadData(folder):
-	data = []
-	labels = []
+def getDiffFiles(folder):
+	for diff in os.listdir(folder):
+		if diff.startswith('.'):
+			continue
+		fullPath = os.path.join(folder, diff)
+		if os.path.isdir(fullPath):
+			yield from getDiffFiles(fullPath)
+		if diff.endswith('.diff'):
+			yield fullPath
+
+
+def loadDataset(folder):
 	vocaburary = set()
 	vocaburary.add(0)
 
 	max_line_length = 0
 
-	inputFiles = []
-	for diff in os.scandir(folder):
-		if diff.is_dir() or not diff.name.endswith('.diff'):
-			continue
+	inputFiles = sorted(getDiffFiles(folder))
+	data = []
+	for file in inputFiles:
+		with open(file, 'r', encoding='utf-8') as f:
+			# 抛弃开头5行
+			# for i in range(5):
+			# 	f.readline()
 
-		inputFiles.append(diff.path)
+			# sample = f.read()
+			data.append(f.read())
+		# if len(lines) >= MAX_LINES:
+		# 	lines = lines[:MAX_LINES]
 
-	inputFiles=['a','b']
-	dataset = tf.data.Dataset.from_tensor_slices(inputFiles)
-	dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
-
-
-	dataset = tf.data.Dataset.from_tensor_slices(inputFiles)
-	getLabel(next(iter(dataset)).numpy())
-	dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
-
-	with open(diff.path, 'r', encoding='utf-8') as f:
-		# 抛弃开头5行
-		# for i in range(5):
-		# 	f.readline()
-
-		# sample = f.read()
-		lines = f.readlines()
-		if len(lines) >= MAX_LINES:
-			lines = lines[:MAX_LINES]
-
-		if max_line_length < MAX_LINE_LENGTH:
-			max_line_length = max(max_line_length, *[len(l) for l in lines])
-
-	# sample = [ord(c) for c in sample]
-
-	# lineCount = len(sample) // 22
-	# assert len(sample) % 22 == 0, '输入必须是22的倍数，因为一行有22个字符。'
-	#
-	# for i in range(lineCount):
-	# 	assert sample[i * 22 + 21] == ord('\n')
-
-	# 只看第一个字符
-	# firstColumn = [sample[i * 22] for i in list(range(lineCount))]
-	# sample = firstColumn
-
-	labels.append(getLabel(diff))
-
-	# print([mapIndexToChar(c) for c in sample])
-	data.append(lines)
-
-	# vocaburary.update(set(sample))
-
-	if max_line_length > MAX_LINE_LENGTH:
-		max_line_length = MAX_LINE_LENGTH
-
-	data = [''.join([cutAndPadLine(l, max_line_length) for l in lines]) for lines in data]
-	print(f'{choppedLines} lines are longer than max lingth {MAX_LINE_LENGTH}, chopped.')
+		# if max_line_length < MAX_LINE_LENGTH:
+		# 	max_line_length = max(max_line_length, *[len(l) for l in lines])
 
 	# 确保data中每个sample长度相同
 	featureSize = max([len(sample) for sample in data])
 	for i in range(len(data)):
 		if len(data[i]) < featureSize:
 			data[i] += (' ' * (featureSize - len(data[i])))
-	# for sample in data:
-	# 	assert len(sample) == featureSize
 	for example in data:
 		vocaburary.update(set(example))
 
@@ -139,13 +104,18 @@ def loadData(folder):
 	data = tf.convert_to_tensor(data, tf.int32)
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
-	return tf.data.Dataset.from_tensor_slices((data, labels))
+	labels = [getLabel(f) for f in inputFiles]
+	dataset = tf.data.Dataset.from_tensor_slices((data, labels))
+	# dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
+
+	print(f'There are {len(list(filter(lambda d: d[1] == 1, dataset)))} yes examples, and {len(list(filter(lambda d: d[1] == 0, dataset)))} no examples.')
+	return dataset
 
 
 if __name__ == '__main__':
-	dataset = loadData(r'D:\renaming\data\real\NewPipe')
+	dataset = loadDataset(r'D:\renaming\data\generated\dataset')
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
-	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a label vector of size {dataset.element_spec[1].shape[0]}. ' +
+	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
 		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.')
 
 	length = tf.data.experimental.cardinality(dataset).numpy()
@@ -170,6 +140,8 @@ if __name__ == '__main__':
 	model = tf.keras.Sequential()
 	model.add(tf.keras.layers.Flatten())
 	model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
+	model.add(tf.keras.layers.Dense(100, activation='relu'))
+	model.add(tf.keras.layers.Dense(10, activation='relu'))
 	model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
 
 	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
