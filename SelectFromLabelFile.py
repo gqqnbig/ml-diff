@@ -35,3 +35,16 @@ if __name__ == '__main__':
 
 	for fileName in noCases:
 		shutil.copy(os.path.join(sourceFolder, fileName + '.diff'), noFolder)
+
+	noFolder = r'D:\renaming\data\generated\dataset\presumable\no'
+	numberOfFilesToCollect = 1000
+	for file in os.scandir(sourceFolder):
+		if numberOfFilesToCollect == 0:
+			break
+		if file.is_dir():
+			continue
+
+		if file.name not in yesCases and file.stat().st_size <= 5 * 1024:
+			# assume the file is a no-renaming case
+			shutil.copy(file.path, noFolder)
+			numberOfFilesToCollect -= 1
