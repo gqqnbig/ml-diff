@@ -150,7 +150,7 @@ def spawnFromTemplate(file: str, vocabulary: set, count):
 					e1 = getWordEnd(newLines[j], d)
 					e2 = getWordEnd(newLines[j - 1], d)
 					if newLines[j][e1:] != newLines[j - 1][e2:]:
-						raise NotImplementedError('In a single line, more than 1 place is changed, which is not supported!')
+						raise NotImplementedError(f'Two changes in a single line is not supported!\n{newLines[j - 1]}{newLines[j]}')
 
 					d = getWordStart(newLines[j], d)
 
@@ -212,15 +212,22 @@ def collectVocabulary(vocabularyFile, dirs):
 
 if __name__ == '__main__':
 	vocabularyFile = r'vocabularyFile.txt'
-	collectVocabulary(vocabularyFile, [r'D:\renaming\data\real\AntennaPod', r'D:\renaming\data\real\baritone', r'D:\renaming\data\real\camel', r'D:\renaming\data\real\NewPipe'])
-	exit()
+	# collectVocabulary(vocabularyFile, [r'D:\renaming\data\real\AntennaPod', r'D:\renaming\data\real\baritone', r'D:\renaming\data\real\camel', r'D:\renaming\data\real\NewPipe'])
+	# exit()
 
 	with open(vocabularyFile, 'r', encoding='utf-8') as f:
 		vocabulary = set(f.read().splitlines())
 
 	rawChangeCount = 10
+	# spawnFromTemplate(r'D:\renaming\data\generated\dd\LinkedList-1.diff', vocabulary, 10)
 
-	# spawnFromTemplate(r'D:\renaming\data\generated\dd\AirlineProblem-9.diff', vocabulary, 10)
+	# for file in os.scandir(r'D:\renaming\data\generated\dd'):
+	# 	if file.name.count('-') == 1:
+	# 		try:
+	# 			spawnFromTemplate(file.path, vocabulary, 10)
+	# 		except Exception as e:
+	# 			print(f'File {file.name} has error:\n' + str(e))
+	#
 	# exit()
 
 	outputDir = r'D:\renaming\data\generated\dd'
@@ -230,33 +237,38 @@ if __name__ == '__main__':
 			continue
 
 		previousDiffs = []
-		print(f'Open {file.name}.')
-		for pass_ in range(rawChangeCount):
+		print(f'\nOpen {file.name}.')
+		pass_ = 0
+		while pass_ < rawChangeCount:
 			print(f'You will need to modify {rawChangeCount - pass_} more times.')
 
-			diffFilePath = os.path.join(outputDir, os.path.splitext(file.name)[0] + '-' + str(pass_) + '.diff')
-			userInput = input('When you are done with renaming, remember save the file. Press s to skip, n to stop, anything else to continue.')
-			if userInput == 's':
-				print(f'{diffFilePath} is untouched.')
-				continue
-			elif userInput == 'n':
-				break
+			try:
+				diffFilePath = os.path.join(outputDir, os.path.splitext(file.name)[0] + '-' + str(pass_) + '.diff')
+				userInput = input('When you are done with renaming, remember save the file. Press s to skip, n to stop, anything else to continue.')
+				if userInput == 's':
+					print(f'{diffFilePath} is untouched.')
+					pass_ += 1
+					continue
+				elif userInput == 'n':
+					break
 
-			diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
-			while diff in previousDiffs:
-				input('This modification is the same as one of previous ones. Please try again. Press enter.')
 				diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
+				while diff in previousDiffs:
+					input('This modification is the same as one of previous ones. Please try again. Press enter.')
+					diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
 
-			lines = diff.splitlines(True)
+				lines = diff.splitlines(True)
 
-			with open(diffFilePath, 'w', encoding='utf-8', newline='\n') as f:
-				f.writelines(lines[4:])
+				with open(diffFilePath, 'w', encoding='utf-8', newline='\n') as f:
+					f.writelines(lines[4:])
 
-			spawnFromTemplate(diffFilePath, vocabulary, 10)
+				spawnFromTemplate(diffFilePath, vocabulary, 10)
+				subprocess.run(f'git checkout {file.name}', cwd=r'D:\renaming\data\generated\original', stderr=subprocess.DEVNULL)
 
-			subprocess.run(f'git checkout {file.name}', cwd=r'D:\renaming\data\generated\original', stderr=subprocess.DEVNULL)
-
-			print('Good job. Diff registered. File is reverted.')
+				print(r'Good job. Diff registered. File is reverted.')
+				pass_ += 1
+			except NotImplementedError as e:
+				print(e)
 
 # spawnFromTemplate(r'D:\renaming\neural network\tests\Test Cases\catch exception rename-ex-e.diff', vocabulary, 10)
 
