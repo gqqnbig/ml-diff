@@ -114,11 +114,10 @@ def isLowerOrUnderscore(n: str):
 def spawnFromTemplate(file: str, vocabulary: set, count):
 	with open(file, 'r', encoding='utf-8') as f:
 		lines = f.readlines()
-		if type(f.newlines) is tuple and len(f.newlines) > 1:
-			raise Exception(f'File {file} uses mixed line endings, which is not supported.')
-
+		if len(lines) == 0:
+			raise Exception(f'')
 		if f.newlines != '\n':
-			raise Exception('Currently, only Linux line ending (\\n) is supported.')
+			raise Exception(f'Currently, only Linux line ending (\\n) is supported. The line ending of {file} is {f.newlines}.')
 
 		vocabulary = vocabulary.difference(getVocabulary(''.join(lines)))
 
