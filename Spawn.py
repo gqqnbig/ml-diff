@@ -251,10 +251,14 @@ if __name__ == '__main__':
 				elif userInput == 'n':
 					break
 
-				diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
-				while diff in previousDiffs:
-					input('This modification is the same as one of previous ones. Please try again. Press enter.')
+				while True:
 					diff = subprocess.check_output('git diff --no-color ' + file.name, cwd=r'D:\renaming\data\generated\original').decode(errors='ignore')
+					if diff == '':
+						input('No modifications are detected. Please try again. Press enter.')
+					elif diff in previousDiffs:
+						input('This modification is the same as one of previous ones. Please try again. Press enter.')
+					else:
+						break
 
 				lines = diff.splitlines(True)
 
