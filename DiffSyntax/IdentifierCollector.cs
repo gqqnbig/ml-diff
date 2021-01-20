@@ -12,7 +12,7 @@ namespace DiffSyntax
 
 		private void VisitDeclaredIdentifier(ITerminalNode identifier, int ruleIndex)
 		{
-			
+
 			DeclaredIdentifiers.Add(new IdentifierDeclaration(identifier.GetText(), ruleIndex, identifier.SourceInterval.a));
 		}
 
@@ -105,30 +105,6 @@ namespace DiffSyntax
 		public override object VisitLambdaParameters([NotNull] LambdaParametersContext context)
 		{
 			throw new System.NotSupportedException("Did't intent to support Java 8");
-		}
-	}
-
-	class IdentifierDeclaration
-	{
-
-		public string Name { get; set; }
-
-		/// <summary>
-		/// Index of the rule where the identifier is extracted.
-		/// </summary>
-		public int Rule { get; set; }
-
-		/// <summary>
-		/// The place where the identifier appears at the input.
-		/// </summary>
-		public int InputIndex { get; set; }
-
-
-		public IdentifierDeclaration(string name, int ruleContext, int inputIndex)
-		{
-			Name = name;
-			Rule = ruleContext;
-			InputIndex = inputIndex;
 		}
 	}
 }
