@@ -10,6 +10,16 @@ namespace DiffSyntax
 {
 	class Program
 	{
+		static int PopulateTokens(ITokenStream tokens)
+		{
+			while (tokens.LA(1) != IntStreamConstants.EOF)
+				tokens.Consume();
+
+			Debug.Assert(tokens.Index == tokens.Size - 1);
+			return tokens.Size;
+
+		}
+
 
 		static void Main(string[] args)
 		{
@@ -21,26 +31,84 @@ namespace DiffSyntax
 
 			var stream = CharStreams.fromString(input);
 			ITokenSource lexer = new JavaLexer(stream);
-
-
 			ITokenStream tokens = new CommonTokenStream(lexer);
+
+			int tokenSize = PopulateTokens(tokens);
+
+
 			var parser = new JavaParser(tokens);
 			parser.ErrorHandler = new BailErrorStrategy();
 			parser.RemoveErrorListeners();
 
-			var tree = FindLongestTree(0, tokens, parser);
 
-			var identifierCollector = new IdentifierCollector();
-			identifierCollector.Visit(tree);
+			for (int startToken = 0; startToken < tokenSize;)
+			{
+				tokens.Seek(startToken);
+				startToken = tokens.Index;
 
-			
-			Console.WriteLine($"Found the following declared identifers: " +
-								string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
-												  select id.Item1 + " from " + parser.RuleNames[id.Item2])
-								+ ".");
+				IToken startPosition = tokens.LT(1);
+				if (startPosition.Type == IntStreamConstants.EOF)
+					break;
+				Console.Write($"Start at token {startPosition.Text} (t:{startToken}, l:{startPosition.Line}, c:{startPosition.Column})");
+
+
+				var tree = FindLongestTree(startToken, tokens, parser);
+				//The rule must consume something.
+				if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex)
+				{
+					int endLine = tree.Stop.Line;
+
+					//matches a full line, probabaly EOF.
+					bool isFullLineMatch = tree.Stop.TokenIndex + 1 == tokenSize || tokens.Get(tree.SourceInterval.b + 1).Line > endLine;
+					if (isFullLineMatch)
+						Console.WriteLine($" {parser.RuleNames[tree.RuleIndex]} matches line {endLine} in full.");
+					else
+						Console.WriteLine($" {parser.RuleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
+
+
+					if (tree.Start.Line < tree.Stop.Line)
+					{
+						var identifierCollector = new IdentifierCollector();
+						identifierCollector.Visit(tree);
+						Console.WriteLine($"Found the following declared identifers: " +
+											string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
+															  select id.Name + " from " + parser.RuleNames[id.Rule])
+											+ ".");
+					}
+					else
+						Console.WriteLine("Match is within a line, skip");
+
+					//fastward startToken to the next line.
+
+					int i = tree.Stop.TokenIndex + 1;
+					for (; ; )
+					{
+						if (i == tokenSize)
+						{
+							//All remaining tokens are on the same line.
+							return;
+						}
+						if (tokens.Get(i).Line > endLine)
+						{
+							startToken = i;
+							break;
+						}
+						else
+						{
+							tokens.Seek(++i);
+							i = tokens.Index;
+						}
+					}
+				}
+				else
+				{
+					Console.WriteLine(" No rule can be matched.");
+					startToken++;
+				}
+			}
 		}
 
-		private static RuleContext FindLongestTree(int startIndex, ITokenStream tokens, JavaParser parser)
+		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens, JavaParser parser)
 		{
 			Type type = parser.GetType();
 
@@ -50,7 +118,7 @@ namespace DiffSyntax
 			foreach (string ruleName in parser.RuleIndexMap.Keys)
 			{
 				tokens.Seek(startIndex);
-				Console.Write($"Try rule {ruleName}...");
+				//Console.Write($"Try rule {ruleName}...");
 
 				try
 				{
@@ -59,16 +127,19 @@ namespace DiffSyntax
 					ParserRuleContext context = (ParserRuleContext)m.Invoke(parser, new object[0]);
 
 					if (context == null)
-						Console.WriteLine($"{ruleName} is not a match.");
+					{
+						//Console.WriteLine($"{ruleName} is not a match.");
+					}
 					else
 					{
 						//var tree = parser.classBodyDeclaration();
 
-						Console.WriteLine($"{ruleName} produced a full match, stoped at {context.Stop.StopIndex}.");
+						//Console.WriteLine($"{ruleName} produced a full match, stoped at {context.Stop.StopIndex}.");
 						if (context.Stop.StopIndex > stopIndex)
 						{
 							stopIndex = context.Stop.StopIndex;
 							longestMatchRule = ruleName;
+							longestTree = context;
 						}
 					}
 				}
@@ -81,7 +152,7 @@ namespace DiffSyntax
 
 						if (recongnitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
 						{
-							Console.WriteLine($"{ruleName} stoped at the end of input. The input is an incomplete syntax unit.");
+							//Console.WriteLine($"{ruleName} stoped at the end of input. The input is an incomplete syntax unit.");
 
 							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= stopIndex);
 							longestMatchRule = ruleName;
@@ -91,7 +162,7 @@ namespace DiffSyntax
 						else
 						{
 
-							Console.WriteLine($" match up to {tree.SourceInterval.b}, and IsEmpty={tree.IsEmpty}.");
+							//Console.WriteLine($" match up to {tree.SourceInterval.b}, and IsEmpty={tree.IsEmpty}.");
 							if (tree.SourceInterval.b > stopIndex)
 							{
 								stopIndex = tree.SourceInterval.b;
@@ -107,12 +178,15 @@ namespace DiffSyntax
 				}
 			}
 
+			if (longestTree == null)
+				return null;
+
 			while (longestTree.Parent != null)
 			{
 				longestTree = longestTree.Parent;
 			}
 			Debug.Assert(longestTree == null || longestTree.GetType().Name.Contains(longestMatchRule, StringComparison.InvariantCultureIgnoreCase));
-			return longestTree;
+			return (ParserRuleContext)longestTree;
 		}
 	}
 }
