@@ -27,23 +27,28 @@ namespace DiffSyntax
 			parser.ErrorHandler = new BailErrorStrategy();
 			parser.RemoveErrorListeners();
 
+			var tree = FindLongestTree(0, tokens, parser);
 
-			Type typeJavaParser = typeof(JavaParser);
+			var identifierCollector = new IdentifierCollector();
+			identifierCollector.Visit(tree);
+			Console.ReadLine();
+		}
+
+		private static RuleContext FindLongestTree(int startIndex, ITokenStream tokens, JavaParser parser)
+		{
+			Type type = parser.GetType();
 
 			int stopIndex = 0;
-			string longestMatchRule;
+			string longestMatchRule = null;
+			RuleContext longestTree = null;
 			foreach (string ruleName in parser.RuleIndexMap.Keys)
 			{
-				tokens.Seek(0);
-				//parser = new JavaParser(tokens);
-				//parser.ErrorHandler = new BailErrorStrategy();
-				//parser.RemoveErrorListeners();
+				tokens.Seek(startIndex);
 				Console.Write($"Try rule {ruleName}...");
-
 
 				try
 				{
-					var m = typeJavaParser.GetMethod(ruleName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+					var m = type.GetMethod(ruleName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 					Debug.Assert(m != null);
 					ParserRuleContext context = (ParserRuleContext)m.Invoke(parser, new object[0]);
 
@@ -68,21 +73,24 @@ namespace DiffSyntax
 						RecognitionException recongnitionException = (RecognitionException)e.InnerException.InnerException;
 						var tree = recongnitionException.Context;
 
-						if (recongnitionException.OffendingToken.StartIndex == input.Length)
+						if (recongnitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
 						{
 							Console.WriteLine($"{ruleName} stoped at the end of input. The input is an incomplete syntax unit.");
 
 							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= stopIndex);
 							longestMatchRule = ruleName;
+							longestTree = tree;
 							break;
 						}
-						else {
+						else
+						{
 
-							Console.WriteLine($" can match up to {tree.SourceInterval.b}, and IsEmpty={tree.IsEmpty}.");
+							Console.WriteLine($" match up to {tree.SourceInterval.b}, and IsEmpty={tree.IsEmpty}.");
 							if (tree.SourceInterval.b > stopIndex)
 							{
 								stopIndex = tree.SourceInterval.b;
 								longestMatchRule = ruleName;
+								longestTree = tree;
 							}
 						}
 					}
@@ -93,7 +101,12 @@ namespace DiffSyntax
 				}
 			}
 
-			Console.ReadLine();
+			while (longestTree.Parent != null)
+			{
+				longestTree = longestTree.Parent;
+			}
+			Debug.Assert(longestTree == null || longestTree.GetType().Name.Contains(longestMatchRule, StringComparison.InvariantCultureIgnoreCase));
+			return longestTree;
 		}
 	}
 }
