@@ -1,0 +1,17 @@
+diff --git a/java/java/JavaLexer.g4 b/java/java/JavaLexer.g4
+index 6919d231..d0991d70 100644
+--- a/java/java/JavaLexer.g4
++++ b/java/java/JavaLexer.g4
+@@ -167,9 +167,9 @@ ELLIPSIS:           '...';
+ 
+ // Whitespace and comments
+ 
+-WS:                 [ \t\r\n\u000C]+ -> channel(HIDDEN);
+-COMMENT:            '/*' .*? '*/'    -> channel(HIDDEN);
+-LINE_COMMENT:       '//' ~[\r\n]*    -> channel(HIDDEN);
++WS:                 [ \t\r\n\u000C]+ -> skip;
++COMMENT:            '/*' .*? '*/'    -> skip;
++LINE_COMMENT:       '//' ~[\r\n]*    -> skip;
+ 
+ // Identifiers
+ 
