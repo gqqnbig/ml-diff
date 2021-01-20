@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using System.Linq;
 
 namespace DiffSyntax
 {
@@ -31,7 +32,12 @@ namespace DiffSyntax
 
 			var identifierCollector = new IdentifierCollector();
 			identifierCollector.Visit(tree);
-			Console.ReadLine();
+
+			
+			Console.WriteLine($"Found the following declared identifers: " +
+								string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
+												  select id.Item1 + " from " + parser.RuleNames[id.Item2])
+								+ ".");
 		}
 
 		private static RuleContext FindLongestTree(int startIndex, ITokenStream tokens, JavaParser parser)
