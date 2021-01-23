@@ -224,6 +224,7 @@ namespace DiffSyntax
 					if (tokens.LA(1) == IntStreamConstants.EOF)
 					{
 						isFullLineMatch = true;
+						Debug.Assert(nextStartToken == tokenSize - 1, "Token stream reads EOF, the index must be the last one.");
 						nextStartToken = tokenSize;
 					}
 					else if (tokens.LT(1).Line > endLine)
