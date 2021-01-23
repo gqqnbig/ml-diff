@@ -6,33 +6,75 @@ using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace DiffSyntax
 {
 	class Program
 	{
-		static int PopulateTokens(ITokenStream tokens)
+		private static readonly ILogger logger;
+
+		static Program()
 		{
-			while (tokens.LA(1) != IntStreamConstants.EOF)
-				tokens.Consume();
+			string configFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.AppContext.BaseDirectory), "appsettings.json");
+			if (System.IO.File.Exists(configFilePath) == false)
+				Console.Error.WriteLine($"{configFilePath} doesn't exist.");
+			var builder = new ConfigurationBuilder()
+				.SetBasePath(Directory.GetCurrentDirectory())
+				.AddJsonFile(configFilePath, optional: true, reloadOnChange: true);
+			var configuration = builder.Build();
+			ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+			{
+				builder.AddConfiguration(configuration.GetSection("Logging")).AddConsole();
+			});
 
-			Debug.Assert(tokens.Index == tokens.Size - 1);
-			return tokens.Size;
-
+			logger = loggerFactory.CreateLogger<Program>();
 		}
+
 
 
 		static void Main(string[] args)
 		{
+			//CheckIdentifierChanges(@"D:\renaming\data\generated\dataset\AntennaPod\no\007f92c291c280f7f58f17b8a849bdbd0d771608.diff");
+
+
+			foreach (string path in System.IO.Directory.EnumerateFiles(@"D:\renaming\data\generated\dataset", "*.diff", SearchOption.AllDirectories))
+			{
+				string label = Path.GetFileName(Path.GetDirectoryName(path));
+				Trace.Assert(label.Equals("yes", StringComparison.OrdinalIgnoreCase) || label.Equals("no", StringComparison.OrdinalIgnoreCase));
+
+				try
+				{
+					if (CheckIdentifierChanges(path) == label.Equals("yes", StringComparison.OrdinalIgnoreCase))
+					{
+						Console.WriteLine($"{path} is good");
+					}
+					else
+					{
+						Console.WriteLine($"The label of {path} is {label}, but syntax analysis doesn't agree");
+					}
+				}
+				catch (Exception e)
+				{
+					logger.LogError(new EventId(0), e, $"{path} caused error:\n{e.Message}", new object[0]);
+					throw;
+				}
+			}
+		}
+
+
+		static bool CheckIdentifierChanges(string diffPath)
+		{
 			List<string> lines = new List<string>();
-			using (StreamReader sr = new StreamReader(@"D:\renaming\neural network\DiffSyntax\test\FilterExample-4.diff"))
+			using (StreamReader sr = new StreamReader(diffPath))
 			{
 				while (sr.EndOfStream == false)
 					lines.Add(sr.ReadLine());
 			}
 
 			var uniqueInBefore = new List<IdentifierDeclarationInDiff>();
-			var unqiueInAfter = new List<IdentifierDeclarationInDiff>();
+			var uniqueInAfter = new List<IdentifierDeclarationInDiff>();
 
 			List<List<string>> snippets = new List<List<string>>(SplitDiffIntoSnippets(lines));
 
@@ -56,23 +98,45 @@ namespace DiffSyntax
 				var ua = new List<IdentifierDeclaration>(afterIdentifiers);
 				beforeIdentifiers.ForEach(l => ua.Remove(l));
 
-				unqiueInAfter.AddRange(from d in ua
+				uniqueInAfter.AddRange(from d in ua
 									   select new IdentifierDeclarationInDiff { IdentifierDeclaration = d, SnippetIndex = snippetIndex });
 
-				//Console.WriteLine($"Found the following declared identifers: " +
-				//			string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
-				//							  select id.Name + " from " + parser.RuleNames[id.Rule])
-				//			+ ".");
+				//logger.LogInformation("Found the following declared identifers: {0}.", string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
+				//																						 select id.Name + " from " + parser.RuleNames[id.Rule]));
 
 			}
 
-			if (uniqueInBefore.Count == 1 && unqiueInAfter.Count == 1)
+			if (uniqueInBefore.Count == 1 && uniqueInAfter.Count == 1)
 			{
-				Console.WriteLine($"This diff only changes one identifier, from {uniqueInBefore[0].IdentifierDeclaration.Name} to {unqiueInAfter[0].IdentifierDeclaration.Name}.");
+				Console.WriteLine($"This diff only changes one identifier, from {uniqueInBefore[0].IdentifierDeclaration.Name} to {uniqueInAfter[0].IdentifierDeclaration.Name}.");
+				return true;
 			}
+			else if (uniqueInBefore.Count == 0 && uniqueInAfter.Count == 0)
+			{
+				Console.WriteLine("No identifier changes.");
+				return false;
+			}
+			else
+			{
+				string b = string.Join(", ", from i in uniqueInBefore
+											 select i.IdentifierDeclaration.Name);
+				string a = string.Join(", ", from i in uniqueInAfter
+											 select i.IdentifierDeclaration.Name);
 
+				Console.WriteLine($"There are multiple identifier changes in this diff.\nBefore: {b}\nAfter: {a}.");
+				return false;
+			}
 		}
 
+		static int PopulateTokens(ITokenStream tokens)
+		{
+			while (tokens.LA(1) != IntStreamConstants.EOF)
+				tokens.Consume();
+
+			Debug.Assert(tokens.Index == tokens.Size - 1);
+			return tokens.Size;
+
+		}
 
 		private static Tuple<string, string> RecoverBeforeAfter(List<string> lines)
 		{
@@ -139,7 +203,10 @@ namespace DiffSyntax
 				IToken startPosition = tokens.LT(1);
 				if (startPosition.Type == IntStreamConstants.EOF)
 					break;
-				Console.Write($"Start at token {startPosition.Text} (t:{startToken}, l:{startPosition.Line}, c:{startPosition.Column})");
+
+				//The order of the parameters, not their placeholder names, determines which parameters are used...
+				//https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template
+				logger.LogInformation("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
 
 
 				var tree = FindLongestTree(startToken, tokens, parser);
@@ -164,9 +231,9 @@ namespace DiffSyntax
 
 
 					if (isFullLineMatch)
-						Console.WriteLine($" {parser.RuleNames[tree.RuleIndex]} matches line {endLine} in full.");
+						logger.LogInformation(" {0} matches line {1} in full.", parser.RuleNames[tree.RuleIndex], endLine);
 					else
-						Console.WriteLine($" {parser.RuleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
+						logger.LogInformation($" {parser.RuleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
 
 
 					if (tree.Start.Line < tree.Stop.Line || isFullLineMatch)
@@ -176,13 +243,13 @@ namespace DiffSyntax
 						identifierDeclarations.AddRange(identifierCollector.DeclaredIdentifiers);
 					}
 					else
-						Console.WriteLine("Match is within a line, skip");
+						logger.LogInformation("Match is within a line, skip");
 
 					startToken = nextStartToken;
 				}
 				else
 				{
-					Console.WriteLine(" No rule can be matched.");
+					logger.LogInformation(" No rule can be matched.");
 					startToken++;
 				}
 			}
@@ -199,7 +266,7 @@ namespace DiffSyntax
 			foreach (string ruleName in parser.RuleIndexMap.Keys)
 			{
 				tokens.Seek(startIndex);
-				//Console.Write($"Try rule {ruleName}...");
+				logger.LogDebug("Try rule {0}...", ruleName);
 
 				try
 				{
@@ -209,13 +276,13 @@ namespace DiffSyntax
 
 					if (context == null)
 					{
-						//Console.WriteLine($"{ruleName} is not a match.");
+						logger.LogDebug("{0} is not a match.", ruleName);
 					}
 					else
 					{
 						//var tree = parser.classBodyDeclaration();
 
-						//Console.WriteLine($"{ruleName} produced a full match, stoped at {context.Stop.StopIndex}.");
+						logger.LogDebug("{0} produced a full match, stoped at {1}.", ruleName, context.Stop.StopIndex);
 						if (context.Stop.StopIndex > stopIndex)
 						{
 							stopIndex = context.Stop.StopIndex;
@@ -233,7 +300,7 @@ namespace DiffSyntax
 
 						if (recongnitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
 						{
-							//Console.WriteLine($"{ruleName} stoped at the end of input. The input is an incomplete syntax unit.");
+							logger.LogDebug("{0} stoped at the end of input. The input is an incomplete syntax unit.", ruleName);
 
 							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= stopIndex);
 							longestMatchRule = ruleName;
@@ -243,7 +310,7 @@ namespace DiffSyntax
 						else
 						{
 
-							//Console.WriteLine($" match up to {tree.SourceInterval.b}, and IsEmpty={tree.IsEmpty}.");
+							logger.LogDebug(" match up to {0}, and IsEmpty={1}.", tree.SourceInterval.b, tree.IsEmpty);
 							if (tree.SourceInterval.b > stopIndex)
 							{
 								stopIndex = tree.SourceInterval.b;
