@@ -195,16 +195,17 @@ namespace DiffSyntax
 			parser.RemoveErrorListeners();
 
 
-			for (int startToken = 0; startToken < tokenSize; startToken++)
+			int startToken = FindNextToken(tokens).TokenIndex;
+			for (; ; )
 			{
-				tokens.Seek(startToken);
-				startToken = tokens.Index;
-
 				IToken startPosition = tokens.LT(1);
 				if (startPosition.Type == IntStreamConstants.EOF)
 					break;
 				if (new[] { ",", ")", "}" }.Contains(startPosition.Text))
+				{
+					startToken = FindNextToken(tokens, startToken).TokenIndex;
 					continue;
+				}
 
 
 				//The order of the parameters, not their placeholder names, determines which parameters are used...
@@ -212,7 +213,7 @@ namespace DiffSyntax
 				logger.LogInformation("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
 
 
-				var tree = FindLongestTree(startToken, tokens, parser);
+				ParserRuleContext tree = FindLongestTree(startToken, tokens, parser);
 				//The rule must consume something.
 				if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex)
 				{
@@ -221,15 +222,16 @@ namespace DiffSyntax
 					//matches a full line, probabaly EOF.
 					bool isFullLineMatch = false;
 
-					int nextStartToken = tree.Stop.TokenIndex + 1;
-					tokens.Seek(nextStartToken);
-					nextStartToken = tokens.Index;
-					IToken t = tokens.LT(1);
+					IToken t = FindNextToken(tokens, tree);
+
+					//int nextStartToken = tree.Stop.TokenIndex + 1;
+					//tokens.Seek(nextStartToken);
+					//nextStartToken = tokens.Index;
 #if DEBUG
 					if (t.Type == IntStreamConstants.EOF)
 					{
 						isFullLineMatch = true;
-						Debug.Assert(nextStartToken == tokenSize - 1, "Token stream reads EOF, the index must be the last one.");
+						//Debug.Assert(nextStartToken == tokenSize - 1, "Token stream reads EOF, the index must be the last one.");
 					}
 					else if (t.Line > endLine)
 						isFullLineMatch = true;
@@ -254,14 +256,32 @@ namespace DiffSyntax
 					else
 						logger.LogInformation("Match is within a line, skip");
 
-					startToken = nextStartToken - 1;
+					startToken = t.TokenIndex;
 				}
 				else
 				{
 					logger.LogInformation(" No rule can be matched.");
+
+					startToken = FindNextToken(tokens, startToken).TokenIndex;
 				}
 			}
 			return identifierDeclarations;
+		}
+
+		private static IToken FindNextToken(ITokenStream tokens, [NotNull] ParserRuleContext tree)
+		{
+			var tokenIndex = tree.Stop.TokenIndex + 1;
+
+			tokens.Seek(tokenIndex);
+			return tokens.LT(1);
+		}
+
+		private static IToken FindNextToken(ITokenStream tokens, int? currentTokenIndex = null)
+		{
+			if (currentTokenIndex == null)
+				currentTokenIndex = -1;
+			tokens.Seek(currentTokenIndex.Value + 1);
+			return tokens.LT(1);
 		}
 
 		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens, JavaParser parser)
