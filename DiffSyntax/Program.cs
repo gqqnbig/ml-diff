@@ -182,13 +182,9 @@ namespace DiffSyntax
 		{
 			List<IdentifierDeclaration> identifierDeclarations = new List<IdentifierDeclaration>();
 
-
-			var stream = CharStreams.fromString(javaSnippet);
-			JavaLexer lexer = new JavaLexer(stream);
-			CommonTokenStream tokens = new CommonTokenStream(lexer);
+			CommonTokenStream tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
 
 
-			int tokenSize = PopulateTokens(tokens);
 			bool isFirst = true;
 
 			int startToken = FindNextToken(tokens).TokenIndex;
@@ -210,16 +206,21 @@ namespace DiffSyntax
 
 
 				var tree = FindLongestTree(startToken, tokens);
-				ParserRuleContext tree2;
 				if (isFirst)
 				{
 					isFirst = false;
-					tree2 = FindLongestTree("/*" + javaSnippet);
 
-					if (tree == null && tree2 != null)
+					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
+					ParserRuleContext tree2 = FindLongestTree(0, tokens2);
+
+					if (tree == null && tree2 != null || tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.TokenIndex)
+					{
+						logger.LogInformation("Token \"/*\" is missing at index 0");
 						tree = tree2;
-					else if (tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.TokenIndex)
-						tree = tree2;
+
+						javaSnippet = "/*" + javaSnippet;
+						tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
+					}
 				}
 
 				if (tree != null && tree.Start.Type == IntStreamConstants.EOF)
@@ -252,10 +253,8 @@ namespace DiffSyntax
 					isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
 #endif
 
-
-
 					if (isFullLineMatch)
-						logger.LogInformation(" {0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
+						logger.LogInformation("{0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
 					else
 						logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
 
@@ -298,16 +297,6 @@ namespace DiffSyntax
 		}
 
 
-		private static ParserRuleContext FindLongestTree(string snippet)
-		{
-
-			var stream = CharStreams.fromString(snippet);
-			JavaLexer lexer = new JavaLexer(stream);
-			CommonTokenStream tokens = new CommonTokenStream(lexer);
-
-			return FindLongestTree(0, tokens);
-		}
-
 		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens)
 		{
 			int stopIndex = 0;
@@ -317,7 +306,6 @@ namespace DiffSyntax
 			foreach (string ruleName in JavaParser.ruleNames)
 			{
 				tokens.Seek(startIndex);
-				logger.LogDebug("Try rule {0}...", ruleName);
 
 				try
 				{
