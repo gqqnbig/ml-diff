@@ -8,6 +8,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using DiffSyntax.Parser;
 
 namespace DiffSyntax
 {
@@ -197,12 +198,12 @@ namespace DiffSyntax
 				logger.LogInformation("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
 
 
-				var tree = FindLongestTree(startToken, tokens);
+				var tree = FindLongestTree(startToken, tokens, insertedTokens == 0, insertedTokens == 0);
 				if (insertedTokens == 0 && isBeginningFixTried == false)
 				{
 					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
-					ParserRuleContext tree2 = FindLongestTree(0, tokens2);
+					ParserRuleContext tree2 = FindLongestTree(0, tokens2, false, false);
 
 					if (tree == null && tree2 != null || tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.StopIndex - 2)
 					{
@@ -232,7 +233,7 @@ namespace DiffSyntax
 					{
 						isEndingFixTried = true;
 						CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
-						ParserRuleContext tree2 = FindLongestTree(previousStartToken, tokens2);
+						ParserRuleContext tree2 = FindLongestTree(previousStartToken, tokens2, false, false);
 
 						if (tree == null && tree2 != null ||
 							tree != null && tree2 != null && (tree2.Start.Type == IntStreamConstants.EOF || tree.Stop.StopIndex < tree2.Stop.StopIndex))
@@ -310,7 +311,7 @@ namespace DiffSyntax
 		}
 
 
-		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens)
+		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
 		{
 			int stopIndex = 0;
 			string longestMatchRule = null;
@@ -324,9 +325,15 @@ namespace DiffSyntax
 				{
 					JavaParser parser = new JavaParser(tokens);
 
-
-					parser.ErrorHandler = new BailErrorStrategy();
-					parser.RemoveErrorListeners();
+					if (canFixBeginning || canFixEnding)
+					{
+						parser.ErrorHandler = new IncompleteSnippetStrategy(canFixBeginning, canFixEnding);
+					}
+					else
+					{
+						parser.ErrorHandler = new BailErrorStrategy();
+						parser.RemoveErrorListeners();
+					}
 
 
 					var m = typeof(JavaParser).GetMethod(ruleName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
