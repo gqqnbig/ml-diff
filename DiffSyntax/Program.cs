@@ -258,6 +258,8 @@ namespace DiffSyntax
 					else
 						logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
 
+					if (tree.Start.Line < tree.Stop.Line)
+						Trace.Assert(isFullLineMatch);
 
 					if (tree.Start.Line < tree.Stop.Line || isFullLineMatch)
 					{
