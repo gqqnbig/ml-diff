@@ -26,7 +26,7 @@ namespace DiffSyntax
 			var configuration = builder.Build();
 			ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
 			{
-				builder.AddConfiguration(configuration.GetSection("Logging")).AddConsole();
+				builder.AddConfiguration(configuration.GetSection("Logging")).AddSimpleConsole();
 			});
 
 			logger = loggerFactory.CreateLogger<Program>();
