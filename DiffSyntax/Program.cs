@@ -128,16 +128,6 @@ namespace DiffSyntax
 			}
 		}
 
-		static int PopulateTokens(ITokenStream tokens)
-		{
-			while (tokens.LA(1) != IntStreamConstants.EOF)
-				tokens.Consume();
-
-			Debug.Assert(tokens.Index == tokens.Size - 1);
-			return tokens.Size;
-
-		}
-
 		private static Tuple<string, string> RecoverBeforeAfter(List<string> lines)
 		{
 			List<string> beforeLines = new List<string>();
@@ -185,7 +175,9 @@ namespace DiffSyntax
 			CommonTokenStream tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
 
 
-			bool isFirst = true;
+			bool isBeginningFixTried = false;
+			bool isEndingFixTried = false;
+			int insertedTokens = 0; //follow single insertion rule.
 
 			int startToken = FindNextToken(tokens).TokenIndex;
 			for (; ; )
@@ -206,20 +198,21 @@ namespace DiffSyntax
 
 
 				var tree = FindLongestTree(startToken, tokens);
-				if (isFirst)
+				if (insertedTokens == 0 && isBeginningFixTried == false)
 				{
-					isFirst = false;
-
+					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
 					ParserRuleContext tree2 = FindLongestTree(0, tokens2);
 
-					if (tree == null && tree2 != null || tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.TokenIndex)
+					if (tree == null && tree2 != null || tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.StopIndex - 2)
 					{
-						logger.LogInformation("Token \"/*\" is missing at index 0");
+						logger.LogInformation("Token \"/*\" is missing at the beginning.");
 						tree = tree2;
 
 						javaSnippet = "/*" + javaSnippet;
 						tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
+
+						insertedTokens++;
 					}
 				}
 
@@ -229,57 +222,75 @@ namespace DiffSyntax
 					Debug.Assert(tree.Stop == null);
 					break;
 				}
-				else if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex) //The rule must consume something.
-				{
-
-					//matches a full line, probabaly EOF.
-					bool isFullLineMatch = false;
-
-					IToken t = FindNextToken(tokens, tree);
-
-					int endLine = tree.Stop.Line;
-					//int nextStartToken = tree.Stop.TokenIndex + 1;
-					//tokens.Seek(nextStartToken);
-					//nextStartToken = tokens.Index;
-#if DEBUG
-					if (t.Type == IntStreamConstants.EOF)
-					{
-						isFullLineMatch = true;
-						//Debug.Assert(nextStartToken == tokenSize - 1, "Token stream reads EOF, the index must be the last one.");
-					}
-					else if (t.Line > endLine)
-						isFullLineMatch = true;
-#else
-					isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
-#endif
-
-					if (isFullLineMatch)
-						logger.LogInformation("{0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
-					else
-						logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
-
-					if (tree.Start.Line < tree.Stop.Line)
-						Trace.Assert(isFullLineMatch);
-
-					if (tree.Start.Line < tree.Stop.Line || isFullLineMatch)
-					{
-						var identifierCollector = new IdentifierCollector();
-						identifierCollector.Visit(tree);
-						identifierDeclarations.AddRange(identifierCollector.DeclaredIdentifiers);
-					}
-					else
-						logger.LogInformation("Match is within a line, skip");
-
-					startToken = t.TokenIndex;
-				}
 				else
 				{
-					logger.LogInformation(" No rule can be matched.");
+					bool isFullLineMatch;
+					int previousStartToken = startToken;
+					CheckTree(tree, tokens, identifierDeclarations, out isFullLineMatch, ref startToken);
 
-					startToken = FindNextToken(tokens, startToken).TokenIndex;
+					if (isFullLineMatch == false && isEndingFixTried == false && insertedTokens == 0)
+					{
+						isEndingFixTried = true;
+						CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
+						ParserRuleContext tree2 = FindLongestTree(previousStartToken, tokens2);
+
+						if (tree == null && tree2 != null ||
+							tree != null && tree2 != null && (tree2.Start.Type == IntStreamConstants.EOF || tree.Stop.StopIndex < tree2.Stop.StopIndex))
+						{
+							logger.LogInformation("Token \"*/\" is missing at the end.");
+							tree = tree2;
+
+							javaSnippet = javaSnippet + "*/";
+							tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
+
+							insertedTokens++;
+
+							startToken = previousStartToken;
+							CheckTree(tree, tokens, identifierDeclarations, out _, ref startToken);
+						}
+					}
 				}
 			}
 			return identifierDeclarations;
+		}
+
+		private static void CheckTree(ParserRuleContext tree, CommonTokenStream tokens, List<IdentifierDeclaration> identifierDeclarations, out bool isFullLineMatch, ref int startToken)
+		{
+			if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex) //The rule must consume something.
+			{
+				IToken t = FindNextToken(tokens, tree);
+
+				int endLine = tree.Stop.Line;
+
+				//match spans an end of line, probabaly a EOF.
+				isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
+
+				if (isFullLineMatch)
+					logger.LogInformation("{0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
+				else
+					logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
+
+				if (tree.Start.Line < tree.Stop.Line)
+					Trace.Assert(isFullLineMatch);
+
+				if (isFullLineMatch)
+				{
+					var identifierCollector = new IdentifierCollector();
+					identifierCollector.Visit(tree);
+					identifierDeclarations.AddRange(identifierCollector.DeclaredIdentifiers);
+				}
+				else
+					logger.LogInformation("Match is within a line, skip");
+
+				startToken = t.TokenIndex;
+			}
+			else
+			{
+				logger.LogInformation("No rule can be matched.");
+
+				startToken = FindNextToken(tokens, startToken).TokenIndex;
+				isFullLineMatch = false;
+			}
 		}
 
 		private static IToken FindNextToken(ITokenStream tokens, [NotNull] ParserRuleContext tree)
