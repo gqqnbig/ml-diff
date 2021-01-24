@@ -184,16 +184,12 @@ namespace DiffSyntax
 
 
 			var stream = CharStreams.fromString(javaSnippet);
-			ITokenSource lexer = new JavaLexer(stream);
-			ITokenStream tokens = new CommonTokenStream(lexer);
+			JavaLexer lexer = new JavaLexer(stream);
+			CommonTokenStream tokens = new CommonTokenStream(lexer);
+
 
 			int tokenSize = PopulateTokens(tokens);
-
-
-			var parser = new JavaParser(tokens);
-			parser.ErrorHandler = new BailErrorStrategy();
-			parser.RemoveErrorListeners();
-
+			bool isFirst = true;
 
 			int startToken = FindNextToken(tokens).TokenIndex;
 			for (; ; )
@@ -213,17 +209,34 @@ namespace DiffSyntax
 				logger.LogInformation("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
 
 
-				ParserRuleContext tree = FindLongestTree(startToken, tokens, parser);
-				//The rule must consume something.
-				if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex)
+				var tree = FindLongestTree(startToken, tokens);
+				ParserRuleContext tree2;
+				if (isFirst)
 				{
-					int endLine = tree.Stop.Line;
+					isFirst = false;
+					tree2 = FindLongestTree("/*" + javaSnippet);
+
+					if (tree == null && tree2 != null)
+						tree = tree2;
+					else if (tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.TokenIndex)
+						tree = tree2;
+				}
+
+				if (tree != null && tree.Start.Type == IntStreamConstants.EOF)
+				{
+					//Input steam is all comment
+					Debug.Assert(tree.Stop == null);
+					break;
+				}
+				else if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex) //The rule must consume something.
+				{
 
 					//matches a full line, probabaly EOF.
 					bool isFullLineMatch = false;
 
 					IToken t = FindNextToken(tokens, tree);
 
+					int endLine = tree.Stop.Line;
 					//int nextStartToken = tree.Stop.TokenIndex + 1;
 					//tokens.Seek(nextStartToken);
 					//nextStartToken = tokens.Index;
@@ -242,9 +255,9 @@ namespace DiffSyntax
 
 
 					if (isFullLineMatch)
-						logger.LogInformation(" {0} matches line {1} in full.", parser.RuleNames[tree.RuleIndex], endLine);
+						logger.LogInformation(" {0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
 					else
-						logger.LogInformation($" {parser.RuleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
+						logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
 
 
 					if (tree.Start.Line < tree.Stop.Line || isFullLineMatch)
@@ -284,27 +297,49 @@ namespace DiffSyntax
 			return tokens.LT(1);
 		}
 
-		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens, JavaParser parser)
-		{
-			Type type = parser.GetType();
 
+		private static ParserRuleContext FindLongestTree(string snippet)
+		{
+
+			var stream = CharStreams.fromString(snippet);
+			JavaLexer lexer = new JavaLexer(stream);
+			CommonTokenStream tokens = new CommonTokenStream(lexer);
+
+			return FindLongestTree(0, tokens);
+		}
+
+		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens)
+		{
 			int stopIndex = 0;
 			string longestMatchRule = null;
 			RuleContext longestTree = null;
-			foreach (string ruleName in parser.RuleIndexMap.Keys)
+
+			foreach (string ruleName in JavaParser.ruleNames)
 			{
 				tokens.Seek(startIndex);
 				logger.LogDebug("Try rule {0}...", ruleName);
 
 				try
 				{
-					var m = type.GetMethod(ruleName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+					JavaParser parser = new JavaParser(tokens);
+
+
+					parser.ErrorHandler = new BailErrorStrategy();
+					parser.RemoveErrorListeners();
+
+
+					var m = typeof(JavaParser).GetMethod(ruleName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 					Debug.Assert(m != null);
 					ParserRuleContext context = (ParserRuleContext)m.Invoke(parser, new object[0]);
 
 					if (context == null)
 					{
 						logger.LogDebug("{0} is not a match.", ruleName);
+					}
+					else if (context.Start.Type == IntStreamConstants.EOF)
+					{
+						logger.LogDebug("Input stream is all comment.");
+						return context;
 					}
 					else
 					{
@@ -338,7 +373,7 @@ namespace DiffSyntax
 						else
 						{
 
-							logger.LogDebug(" match up to {0}, and IsEmpty={1}.", tree.SourceInterval.b, tree.IsEmpty);
+							logger.LogDebug($"{ruleName} match up to {0}, and IsEmpty={1}.", tree.SourceInterval.b, tree.IsEmpty);
 							if (tree.SourceInterval.b > stopIndex)
 							{
 								stopIndex = tree.SourceInterval.b;
