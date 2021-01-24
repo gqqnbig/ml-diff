@@ -195,7 +195,7 @@ namespace DiffSyntax
 			parser.RemoveErrorListeners();
 
 
-			for (int startToken = 0; startToken < tokenSize;)
+			for (int startToken = 0; startToken < tokenSize; startToken++)
 			{
 				tokens.Seek(startToken);
 				startToken = tokens.Index;
@@ -203,6 +203,9 @@ namespace DiffSyntax
 				IToken startPosition = tokens.LT(1);
 				if (startPosition.Type == IntStreamConstants.EOF)
 					break;
+				if (new[] { ",", ")", "}" }.Contains(startPosition.Text))
+					continue;
+
 
 				//The order of the parameters, not their placeholder names, determines which parameters are used...
 				//https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template
@@ -221,14 +224,19 @@ namespace DiffSyntax
 					int nextStartToken = tree.Stop.TokenIndex + 1;
 					tokens.Seek(nextStartToken);
 					nextStartToken = tokens.Index;
-					if (tokens.LA(1) == IntStreamConstants.EOF)
+					IToken t = tokens.LT(1);
+#if DEBUG
+					if (t.Type == IntStreamConstants.EOF)
 					{
 						isFullLineMatch = true;
 						Debug.Assert(nextStartToken == tokenSize - 1, "Token stream reads EOF, the index must be the last one.");
-						nextStartToken = tokenSize;
 					}
-					else if (tokens.LT(1).Line > endLine)
+					else if (t.Line > endLine)
 						isFullLineMatch = true;
+#else
+					isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
+#endif
+
 
 
 					if (isFullLineMatch)
@@ -246,12 +254,11 @@ namespace DiffSyntax
 					else
 						logger.LogInformation("Match is within a line, skip");
 
-					startToken = nextStartToken;
+					startToken = nextStartToken - 1;
 				}
 				else
 				{
 					logger.LogInformation(" No rule can be matched.");
-					startToken++;
 				}
 			}
 			return identifierDeclarations;
