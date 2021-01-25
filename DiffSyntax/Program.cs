@@ -7,33 +7,13 @@ using Antlr4.Runtime.Misc;
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 using DiffSyntax.Parser;
 
 namespace DiffSyntax
 {
 	class Program
 	{
-		private static readonly ILogger logger;
-
-		static Program()
-		{
-			string configFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.AppContext.BaseDirectory), "appsettings.json");
-			if (System.IO.File.Exists(configFilePath) == false)
-				Console.Error.WriteLine($"{configFilePath} doesn't exist.");
-			var builder = new ConfigurationBuilder()
-				.SetBasePath(Directory.GetCurrentDirectory())
-				.AddJsonFile(configFilePath, optional: true, reloadOnChange: true);
-			var configuration = builder.Build();
-			ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-			{
-				builder.AddConfiguration(configuration.GetSection("Logging")).AddSimpleConsole();
-			});
-
-			logger = loggerFactory.CreateLogger<Program>();
-		}
-
-
+		private static readonly ILogger logger = ApplicationLogging.loggerFactory.CreateLogger(nameof(Program));
 
 		static void Main(string[] args)
 		{
