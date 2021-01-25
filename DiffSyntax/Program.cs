@@ -293,9 +293,7 @@ namespace DiffSyntax
 
 		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
 		{
-			int stopIndex = 0;
-			string longestMatchRule = null;
-			RuleContext longestTree = null;
+			ParserRuleContext longestTree = null;
 
 			foreach (string ruleName in JavaParser.ruleNames)
 			{
@@ -334,10 +332,8 @@ namespace DiffSyntax
 						//var tree = parser.classBodyDeclaration();
 
 						logger.LogDebug("{0} produced a full match, stoped at {1}.", ruleName, context.Stop.StopIndex);
-						if (context.Stop.StopIndex > stopIndex)
+						if (context.Stop.StopIndex > longestTree?.Stop.StopIndex)
 						{
-							stopIndex = context.Stop.StopIndex;
-							longestMatchRule = ruleName;
 							longestTree = context;
 						}
 					}
@@ -347,25 +343,21 @@ namespace DiffSyntax
 					if (e.InnerException is ParseCanceledException)
 					{
 						RecognitionException recongnitionException = (RecognitionException)e.InnerException.InnerException;
-						var tree = recongnitionException.Context;
+						ParserRuleContext tree = (ParserRuleContext)recongnitionException.Context;
 
 						if (recongnitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
 						{
 							logger.LogDebug("{0} stoped at the end of input. The input is an incomplete syntax unit.", ruleName);
 
-							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= stopIndex);
-							longestMatchRule = ruleName;
+							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= longestTree?.Stop.StopIndex);
 							longestTree = tree;
 							break;
 						}
 						else
 						{
-
 							logger.LogDebug($"{ruleName} match up to {0}, and IsEmpty={1}.", tree.SourceInterval.b, tree.IsEmpty);
-							if (tree.SourceInterval.b > stopIndex)
+							if (tree.SourceInterval.b > longestTree?.Stop.StopIndex)
 							{
-								stopIndex = tree.SourceInterval.b;
-								longestMatchRule = ruleName;
 								longestTree = tree;
 							}
 						}
@@ -382,9 +374,8 @@ namespace DiffSyntax
 
 			while (longestTree.Parent != null)
 			{
-				longestTree = longestTree.Parent;
+				longestTree = (ParserRuleContext)longestTree.Parent;
 			}
-			Debug.Assert(longestTree == null || longestTree.GetType().Name.Contains(longestMatchRule, StringComparison.InvariantCultureIgnoreCase));
 			return (ParserRuleContext)longestTree;
 		}
 
