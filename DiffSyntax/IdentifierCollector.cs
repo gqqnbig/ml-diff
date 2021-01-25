@@ -40,22 +40,26 @@ namespace DiffSyntax
 		public override object VisitEnumDeclaration([NotNull] EnumDeclarationContext context)
 		{
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
-			Visit(context.enumConstants());
-			Visit(context.enumBodyDeclarations());
+			if (context.enumConstants() != null)
+				Visit(context.enumConstants());
+			if (context.enumBodyDeclarations() != null)
+				Visit(context.enumBodyDeclarations());
 			return null;
 		}
 
 		public override object VisitEnumConstant([NotNull] EnumConstantContext context)
 		{
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
-			Visit(context.classBody());
+			if (context.classBody() != null)
+				Visit(context.classBody());
 			return null;
 		}
 
 		public override object VisitInterfaceDeclaration([NotNull] InterfaceDeclarationContext context)
 		{
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
-			Visit(context.typeParameters());
+			if (context.typeParameters() != null)
+				Visit(context.typeParameters());
 			Visit(context.interfaceBody());
 
 			return null;
@@ -79,7 +83,8 @@ namespace DiffSyntax
 
 		public override object VisitInterfaceMethodDeclaration([NotNull] InterfaceMethodDeclarationContext context)
 		{
-			Visit(context.typeParameters());
+			if (context.typeParameters() != null)
+				Visit(context.typeParameters());
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
 			Visit(context.methodBody());
 			return null;
