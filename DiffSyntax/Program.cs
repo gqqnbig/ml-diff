@@ -329,10 +329,8 @@ namespace DiffSyntax
 					}
 					else
 					{
-						//var tree = parser.classBodyDeclaration();
-
-						logger.LogDebug("{0} produced a full match, stoped at {1}.", ruleName, context.Stop.StopIndex);
-						if (context.Stop.StopIndex > longestTree?.Stop.StopIndex)
+						logger.LogDebug("{0} produced a full match, stoped at {1}.", ruleName, context.SourceInterval.b);
+						if (longestTree == null || context.SourceInterval.b > longestTree.SourceInterval.b)
 						{
 							longestTree = context;
 						}
@@ -343,30 +341,28 @@ namespace DiffSyntax
 					if (e.InnerException is ParseCanceledException)
 					{
 						RecognitionException recongnitionException = (RecognitionException)e.InnerException.InnerException;
-						ParserRuleContext tree = (ParserRuleContext)recongnitionException.Context;
+						ParserRuleContext context = (ParserRuleContext)recongnitionException.Context;
 
 						if (recongnitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
 						{
 							logger.LogDebug("{0} stoped at the end of input. The input is an incomplete syntax unit.", ruleName);
 
 							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= longestTree?.Stop.StopIndex);
-							longestTree = tree;
+							longestTree = context;
 							break;
 						}
 						else
 						{
-							logger.LogDebug($"{ruleName} match up to {0}, and IsEmpty={1}.", tree.SourceInterval.b, tree.IsEmpty);
-							if (tree.SourceInterval.b > longestTree?.Stop.StopIndex)
+							logger.LogDebug($"{ruleName} match up to {0}, and IsEmpty={1}.", context.SourceInterval.b, context.IsEmpty);
+							//context.SourceInterval.b cannot be null, while context.Stop may be.
+							if (longestTree == null || context.SourceInterval.b > longestTree.SourceInterval.b)
 							{
-								longestTree = tree;
+								longestTree = context;
 							}
 						}
 					}
 				}
-				catch (ParseCanceledException e)
-				{
-
-				}
+				catch (ParseCanceledException e) { }
 			}
 
 			if (longestTree == null)
