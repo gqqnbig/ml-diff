@@ -184,8 +184,9 @@ namespace DiffSyntax
 					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
 					ParserRuleContext tree2 = FindLongestTree(0, tokens2, false, false);
-
-					if (tree == null && tree2 != null || tree != null && tree2 != null && tree.Stop.StopIndex < tree2.Stop.StopIndex - 2)
+					Debug.Assert(tree2 == null || tree2.exception == null || tree2.SourceInterval.b < 1, "No auto fixing is allowed, the parsed tree should have no error.");
+					if (tree == null && tree2 != null ||
+						tree != null && tree2 != null && tree.SourceInterval.b < tree2.SourceInterval.b - 2)
 					{
 						logger.LogInformation("Token \"/*\" is missing at the beginning.");
 						tree = tree2;
@@ -205,11 +206,13 @@ namespace DiffSyntax
 				}
 				else
 				{
-					bool isFullLineMatch;
 					int previousStartToken = startToken;
-					CheckTree(tree, tokens, identifierDeclarations, out isFullLineMatch, ref startToken);
-
-					if (isFullLineMatch == false && isEndingFixTried == false && insertedTokens == 0)
+					bool isTreeUseful = CheckTree(tree, tokens, identifierDeclarations, ref startToken);
+					if (isTreeUseful && tree.exception != null)
+					{
+						insertedTokens++;
+					}
+					else if (isTreeUseful == false && isEndingFixTried == false && insertedTokens == 0)
 					{
 						isEndingFixTried = true;
 						CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
@@ -227,7 +230,7 @@ namespace DiffSyntax
 							insertedTokens++;
 
 							startToken = previousStartToken;
-							CheckTree(tree, tokens, identifierDeclarations, out _, ref startToken);
+							CheckTree(tree, tokens, identifierDeclarations, ref startToken);
 						}
 					}
 				}
@@ -235,7 +238,15 @@ namespace DiffSyntax
 			return identifierDeclarations;
 		}
 
-		private static void CheckTree(ParserRuleContext tree, CommonTokenStream tokens, List<IdentifierDeclaration> identifierDeclarations, out bool isFullLineMatch, ref int startToken)
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="tree"></param>
+		/// <param name="tokens"></param>
+		/// <param name="identifierDeclarations"></param>
+		/// <param name="isFullLineMatch">does the match end at the end of a line, probably a EOF. However it doesn't tell if the match spans multiple lines.</param>
+		/// <param name="startToken"></param>
+		private static bool CheckTree(ParserRuleContext tree, CommonTokenStream tokens, List<IdentifierDeclaration> identifierDeclarations, ref int startToken)
 		{
 			if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex) //The rule must consume something.
 			{
@@ -243,34 +254,34 @@ namespace DiffSyntax
 
 				int endLine = tree.Stop.Line;
 
-				//match spans an end of line, probabaly a EOF.
-				isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
+				bool isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
 
 				if (isFullLineMatch)
 					logger.LogInformation("{0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
 				else
 					logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
 
-				if (tree.Start.Line < tree.Stop.Line)
-					Trace.Assert(isFullLineMatch);
-
-				if (isFullLineMatch)
+				bool isTreeUseful = false;
+				if (tree.Start.Line < tree.Stop.Line || isFullLineMatch)
 				{
 					var identifierCollector = new IdentifierCollector();
 					identifierCollector.Visit(tree);
 					identifierDeclarations.AddRange(identifierCollector.DeclaredIdentifiers);
+
+					isTreeUseful = true;
 				}
 				else
 					logger.LogInformation("Match is within a line, skip");
 
 				startToken = t.TokenIndex;
+				return isTreeUseful;
 			}
 			else
 			{
 				logger.LogInformation("No rule can be matched.");
 
 				startToken = FindNextToken(tokens, startToken).TokenIndex;
-				isFullLineMatch = false;
+				return false;
 			}
 		}
 
@@ -299,18 +310,19 @@ namespace DiffSyntax
 			{
 				tokens.Seek(startIndex);
 
+				ErrorListener errorListener = new ErrorListener();
 				try
 				{
 					JavaParser parser = new JavaParser(tokens);
-
+					parser.RemoveErrorListeners();
 					if (canFixBeginning || canFixEnding)
 					{
 						parser.ErrorHandler = new IncompleteSnippetStrategy(canFixBeginning, canFixEnding);
+						parser.AddErrorListener(errorListener);
 					}
 					else
 					{
 						parser.ErrorHandler = new BailErrorStrategy();
-						parser.RemoveErrorListeners();
 					}
 
 
@@ -372,7 +384,7 @@ namespace DiffSyntax
 			{
 				longestTree = (ParserRuleContext)longestTree.Parent;
 			}
-			return (ParserRuleContext)longestTree;
+			return longestTree;
 		}
 
 
