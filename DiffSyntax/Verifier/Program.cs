@@ -11,15 +11,15 @@ using DiffSyntax.Parser;
 
 namespace DiffSyntax
 {
-	class Program
+	public class Program
 	{
 		private static readonly ILogger logger = ApplicationLogging.loggerFactory.CreateLogger(nameof(Program));
 
 		static void Main(string[] args)
 		{
-			//CheckIdentifierChanges(@"D:\renaming\data\generated\dataset\AntennaPod\no\007f92c291c280f7f58f17b8a849bdbd0d771608.diff");
+			CheckIdentifierChanges(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff");
 
-
+			return;
 			foreach (string path in System.IO.Directory.EnumerateFiles(@"D:\renaming\data\generated\dataset", "*.diff", SearchOption.AllDirectories))
 			{
 				string label = Path.GetFileName(Path.GetDirectoryName(path));
@@ -149,7 +149,7 @@ namespace DiffSyntax
 				yield return diffLines.GetRange(snipetStart, diffLines.Count - snipetStart);
 		}
 
-		private static List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet)
+		public static List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet)
 		{
 			List<IdentifierDeclaration> identifierDeclarations = new List<IdentifierDeclaration>();
 

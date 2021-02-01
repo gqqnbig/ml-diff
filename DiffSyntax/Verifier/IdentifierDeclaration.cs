@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace DiffSyntax
 {
-	class IdentifierDeclaration : IEquatable<IdentifierDeclaration>
+	public class IdentifierDeclaration : IEquatable<IdentifierDeclaration>
 	{
 
 		public string Name { get; set; }
@@ -31,6 +31,11 @@ namespace DiffSyntax
 			if (other == null)
 				return false;
 			return Name == other.Name && Rule == other.Rule;
+		}
+
+		public override string ToString()
+		{
+			return Name + " from Rule " + Rule;
 		}
 	}
 }
