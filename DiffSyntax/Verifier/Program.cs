@@ -160,7 +160,7 @@ namespace DiffSyntax
 			bool isEndingFixTried = false;
 			int insertedTokens = 0; //follow single insertion rule.
 
-			int startToken = FindNextToken(tokens).TokenIndex;
+			int startToken = Helper.FindNextToken(tokens).TokenIndex;
 			for (; ; )
 			{
 				IToken startPosition = tokens.LT(1);
@@ -168,7 +168,7 @@ namespace DiffSyntax
 					break;
 				if (new[] { ",", ")", "}" }.Contains(startPosition.Text))
 				{
-					startToken = FindNextToken(tokens, startToken).TokenIndex;
+					startToken = Helper.FindNextToken(tokens, startToken).TokenIndex;
 					continue;
 				}
 
@@ -249,7 +249,7 @@ namespace DiffSyntax
 		{
 			if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex) //The rule must consume something.
 			{
-				IToken t = FindNextToken(tokens, tree);
+				IToken t = Helper.FindNextToken(tokens, tree);
 
 				int endLine = tree.Stop.Line;
 
@@ -279,25 +279,9 @@ namespace DiffSyntax
 			{
 				logger.LogInformation("No rule can be matched.");
 
-				startToken = FindNextToken(tokens, startToken).TokenIndex;
+				startToken = Helper.FindNextToken(tokens, startToken).TokenIndex;
 				return false;
 			}
-		}
-
-		private static IToken FindNextToken(ITokenStream tokens, [NotNull] ParserRuleContext tree)
-		{
-			var tokenIndex = tree.Stop.TokenIndex + 1;
-
-			tokens.Seek(tokenIndex);
-			return tokens.LT(1);
-		}
-
-		private static IToken FindNextToken(ITokenStream tokens, int? currentTokenIndex = null)
-		{
-			if (currentTokenIndex == null)
-				currentTokenIndex = -1;
-			tokens.Seek(currentTokenIndex.Value + 1);
-			return tokens.LT(1);
 		}
 
 
