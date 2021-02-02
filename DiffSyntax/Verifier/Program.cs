@@ -247,7 +247,7 @@ namespace DiffSyntax
 		/// <param name="startToken"></param>
 		private static bool CheckTree(ParserRuleContext tree, CommonTokenStream tokens, List<IdentifierDeclaration> identifierDeclarations, ref int startToken)
 		{
-			if (tree != null && tree.Start.TokenIndex <= tree.Stop.TokenIndex) //The rule must consume something.
+			if (tree != null && tree.Start.TokenIndex <= tree.Stop?.TokenIndex) //The rule must consume something.
 			{
 				IToken t = Helper.FindNextToken(tokens, tree);
 
