@@ -11,6 +11,7 @@ namespace DiffSyntax
 
 		static ApplicationLogging()
 		{
+			//throw new NotImplementedException();
 			string configFilePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.AppContext.BaseDirectory), "appsettings.json");
 			if (System.IO.File.Exists(configFilePath) == false)
 				Console.Error.WriteLine($"{configFilePath} doesn't exist.");

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="cd /d &quot;$(ProjectDir)&quot;&#xD;&#xA;set CLASSPATH=.;$(ProjectDir)antlr-4.9.1-complete.jar;%25CLASSPATH%25&#xD;&#xA;antlr4.bat -Dlanguage=CSharp  -no-listener -o generated -package DiffSyntax.Antlr  JavaLexer.g4 JavaParser.g4" />
+  </Target>
+  <!-- Using target AfterClean is ideal, but this target doesn't run. -->
+  <Target Name="RemoveGenerated" AfterTargets="Clean">
+    <RemoveDir Directories="$(ProjectDir)generated"/>
+  </Target>
+
+  <ItemGroup>
+    <None Remove="antlr-4.9.1-complete.jar" />
+    <None Remove="antlr4.bat" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Antlr4.Runtime.Standard" Version="4.9.1" />
+  </ItemGroup>
+
+
+</Project>

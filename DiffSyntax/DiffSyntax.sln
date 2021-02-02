@@ -10,7 +10,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{22A68C08-E29D-4605-9C19-5E8E3972E108}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{22A68C08-E29D-4605-9C19-5E8E3972E108}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JavaParser", "JavaParser\JavaParser.csproj", "{57CC5FB7-4E2D-4793-B970-05E76051D908}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,6 +28,10 @@ Global
 		{22A68C08-E29D-4605-9C19-5E8E3972E108}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22A68C08-E29D-4605-9C19-5E8E3972E108}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22A68C08-E29D-4605-9C19-5E8E3972E108}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57CC5FB7-4E2D-4793-B970-05E76051D908}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57CC5FB7-4E2D-4793-B970-05E76051D908}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57CC5FB7-4E2D-4793-B970-05E76051D908}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57CC5FB7-4E2D-4793-B970-05E76051D908}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
