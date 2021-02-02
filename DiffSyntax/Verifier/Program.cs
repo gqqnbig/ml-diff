@@ -17,9 +17,6 @@ namespace DiffSyntax
 
 		static void Main(string[] args)
 		{
-			CheckIdentifierChanges(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff");
-
-			return;
 			foreach (string path in System.IO.Directory.EnumerateFiles(@"D:\renaming\data\generated\dataset", "*.diff", SearchOption.AllDirectories))
 			{
 				string label = Path.GetFileName(Path.GetDirectoryName(path));
@@ -183,10 +180,10 @@ namespace DiffSyntax
 				{
 					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
-					ParserRuleContext tree2 = FindLongestTree(0, tokens2, false, false);
-					Debug.Assert(tree2 == null || tree2.exception == null || tree2.SourceInterval.b < 1, "No auto fixing is allowed, the parsed tree should have no error.");
-					if (tree == null && tree2 != null ||
-						tree != null && tree2 != null && tree.SourceInterval.b < tree2.SourceInterval.b - 2)
+					var tree2 = FindLongestTree(0, tokens2, false, false);
+					tree2.CharIndexOffset = 2;
+					Debug.Assert(tree2.Context == null || tree2.Context.SourceInterval.b < 1, "No auto fixing is allowed, the parsed tree should have no error.");
+					if (tree2.IsBetterThan(tree))
 					{
 						logger.LogInformation("Token \"/*\" is missing at the beginning.");
 						tree = tree2;
@@ -198,17 +195,17 @@ namespace DiffSyntax
 					}
 				}
 
-				if (tree != null && tree.Start.Type == IntStreamConstants.EOF)
+				if (tree.Context != null && tree.Context.Start.Type == IntStreamConstants.EOF)
 				{
 					//Input steam is all comment
-					Debug.Assert(tree.Stop == null);
+					Debug.Assert(tree.Context.Stop == null);
 					break;
 				}
 				else
 				{
 					int previousStartToken = startToken;
-					bool isTreeUseful = CheckTree(tree, tokens, identifierDeclarations, ref startToken);
-					if (isTreeUseful && tree.exception != null)
+					bool isTreeUseful = CheckTree(tree.Context, tokens, identifierDeclarations, ref startToken);
+					if (isTreeUseful && tree.IsAutoFixed)
 					{
 						insertedTokens++;
 					}
@@ -216,10 +213,9 @@ namespace DiffSyntax
 					{
 						isEndingFixTried = true;
 						CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
-						ParserRuleContext tree2 = FindLongestTree(previousStartToken, tokens2, false, false);
+						var tree2 = FindLongestTree(previousStartToken, tokens2, false, false);
 
-						if (tree == null && tree2 != null ||
-							tree != null && tree2 != null && (tree2.Start.Type == IntStreamConstants.EOF || tree.Stop.StopIndex < tree2.Stop.StopIndex))
+						if (tree2.IsBetterThan(tree))
 						{
 							logger.LogInformation("Token \"*/\" is missing at the end.");
 							tree = tree2;
@@ -230,7 +226,7 @@ namespace DiffSyntax
 							insertedTokens++;
 
 							startToken = previousStartToken;
-							CheckTree(tree, tokens, identifierDeclarations, ref startToken);
+							CheckTree(tree.Context, tokens, identifierDeclarations, ref startToken);
 						}
 					}
 				}
@@ -285,9 +281,10 @@ namespace DiffSyntax
 		}
 
 
-		private static ParserRuleContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
+		[return: NotNull]
+		private static FixedContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
 		{
-			ParserRuleContext longestTree = null;
+			FixedContext longestTree = new FixedContext();
 
 			foreach (string ruleName in JavaParser.ruleNames)
 			{
@@ -320,14 +317,14 @@ namespace DiffSyntax
 					else if (context.Start.Type == IntStreamConstants.EOF)
 					{
 						logger.LogDebug("Input stream is all comment.");
-						return context;
+						return new FixedContext { Context = context };
 					}
 					else
 					{
 						logger.LogDebug("{0} produced a full match, stoped at {1}.", ruleName, context.SourceInterval.b);
-						if (longestTree == null || context.SourceInterval.b > longestTree.SourceInterval.b)
+						if (longestTree.Context == null || context.SourceInterval.b > longestTree.Context.SourceInterval.b)
 						{
-							longestTree = context;
+							longestTree.Context = context;
 						}
 					}
 				}
@@ -342,17 +339,17 @@ namespace DiffSyntax
 						{
 							logger.LogDebug("{0} stoped at the end of input. The input is an incomplete syntax unit.", ruleName);
 
-							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= longestTree?.Stop.StopIndex);
-							longestTree = context;
+							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= longestTree.Context?.Stop.StopIndex);
+							longestTree.Context = context;
 							break;
 						}
 						else
 						{
 							logger.LogDebug($"{ruleName} match up to {0}, and IsEmpty={1}.", context.SourceInterval.b, context.IsEmpty);
 							//context.SourceInterval.b cannot be null, while context.Stop may be.
-							if (longestTree == null || context.SourceInterval.b > longestTree.SourceInterval.b)
+							if (longestTree.Context == null || context.SourceInterval.b > longestTree.Context.SourceInterval.b)
 							{
-								longestTree = context;
+								longestTree.Context = context;
 							}
 						}
 					}
@@ -361,11 +358,11 @@ namespace DiffSyntax
 			}
 
 			if (longestTree == null)
-				return null;
+				return new FixedContext();
 
-			while (longestTree.Parent != null)
+			while (longestTree.Context.Parent != null)
 			{
-				longestTree = (ParserRuleContext)longestTree.Parent;
+				longestTree.Context = (ParserRuleContext)longestTree.Context.Parent;
 			}
 			return longestTree;
 		}
