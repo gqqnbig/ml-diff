@@ -244,7 +244,6 @@ namespace DiffSyntax
 		/// <param name="tree"></param>
 		/// <param name="tokens"></param>
 		/// <param name="identifierDeclarations"></param>
-		/// <param name="isFullLineMatch">does the match end at the end of a line, probably a EOF. However it doesn't tell if the match spans multiple lines.</param>
 		/// <param name="startToken"></param>
 		private static bool CheckTree(ParserRuleContext tree, CommonTokenStream tokens, List<IdentifierDeclaration> identifierDeclarations, ref int startToken)
 		{
