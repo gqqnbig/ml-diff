@@ -32,10 +32,14 @@ namespace DiffSyntax
 						Console.WriteLine($"The label of {path} is {label}, but syntax analysis doesn't agree");
 					}
 				}
+				catch (NotSupportedException e)
+				{
+					logger.LogWarning($"{path} caused error:\n{e.Message}");
+				}
 				catch (Exception e)
 				{
 					logger.LogError(new EventId(0), e, $"{path} caused error:\n{e.Message}", new object[0]);
-					throw;
+					return;
 				}
 			}
 		}
