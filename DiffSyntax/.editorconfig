@@ -2,3 +2,6 @@
 
 # CS3021: 由于程序集没有 CLSCompliant 特性，因此类型或成员不需要 CLSCompliant 特性
 dotnet_diagnostic.CS3021.severity = none
+
+# xUnit2013: Do not use equality check to check for collection size.
+dotnet_diagnostic.xUnit2013.severity = none
