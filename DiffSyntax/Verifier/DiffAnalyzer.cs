@@ -189,7 +189,7 @@ namespace DiffSyntax
 
 
 				//int previousStartToken = startToken;
-				bool isTreeUseful = CheckTree(tree.Context, tokens, identifierDeclarations, ref startToken);
+				bool isTreeUseful = CheckTree(tree.Context, tree.Tokens ?? tokens, identifierDeclarations, ref startToken);
 				if (isTreeUseful)
 				{
 					if (string.IsNullOrEmpty(tree.FixDescription) == false)
