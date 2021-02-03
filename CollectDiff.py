@@ -2,6 +2,7 @@ import os
 
 from git import Repo
 
+
 # def getChangeType(diffContent: str):
 # 	"""
 # 	Find out if the diff content has added lines, removed lines, or both
@@ -24,10 +25,7 @@ from git import Repo
 #
 # 	raise Exception('No change in diff.')
 
-
-if __name__ == '__main__':
-	repoPath = r'D:\renaming\data\github\camel'
-	diffFolder = r'D:\renaming\data\real\camel'
+def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 	if not os.path.exists(diffFolder):
 		os.makedirs(diffFolder)
 
@@ -38,14 +36,14 @@ if __name__ == '__main__':
 
 	max_count = None
 	# first_parent=False because repositories often use pull-request pattern that the first parent often aggregates many changes.
-	for commit in repo.iter_commits('master', max_count=max_count, first_parent=False):
+	for commit in repo.iter_commits(branch, max_count=max_count, first_parent=False):
 		if len(commit.parents) == 0:
 			print(f'reach root commit {commit.hexsha}')
 			break
 		if len(commit.parents) == 2:
 			print(f'Ignore merge commit {commit.hexsha}')
 			continue
-		print(commit.hexsha)
+		# print(commit.hexsha)
 
 		changedFiles = commit.parents[0].diff(commit, create_patch=True)
 		# files = list(filter(lambda diff: diff.a_path and diff.b_path and diff.a_path.lower().endswith('.java') and len(diff.diff) > 0, changedFiles))
@@ -61,7 +59,7 @@ if __name__ == '__main__':
 				if len(diff.diff) == 0:
 					continue
 
-				print(diff.a_path)
+				# print(diff.a_path)
 
 				content += diff.diff.decode(errors='ignore')
 		# except UnicodeDecodeError as e:
@@ -76,5 +74,41 @@ if __name__ == '__main__':
 			diffFileName = f'{commit.hexsha}.diff'
 			with open(os.path.join(diffFolder, diffFileName), 'w', encoding='utf-8', newline='\n') as f:
 				f.write(content)
-	# except Exception as e:
-	# 	print(str(e) + ' Possibly a file renaming.')
+
+
+# except Exception as e:
+# 	print(str(e) + ' Possibly a file renaming.')
+
+
+if __name__ == '__main__':
+	repos = [
+		# "AntennaPod",
+		# "baritone",
+		# "camel",
+		# "camunda-bpm-platform",
+		# ("dbeaver", 'devel'),
+		# "EhViewer",
+		# "Geyser",
+		# "iceberg",
+		# "Java",
+		# "java-design-patterns",
+		# "jenkins",
+		# "keycloak",
+		# "libgdx",
+		# "Mindustry",
+		# "NewPipe",
+		# "openapi-generator",
+		# "quarkus",
+		# "Signal-Android",
+		("spring-petclinic",'main'),
+		"strimzi-kafka-operator",
+		"testcontainers-java",
+		"tutorials",
+		"wiremock"]
+
+	for repo in repos:
+		print(f'Collecting {repo}')
+		if type(repo) is tuple:
+			collectDiffFromRepo(r'D:\renaming\data\github\\' + repo[0], r'D:\renaming\data\real\\' + repo[0], repo[1])
+		else:
+			collectDiffFromRepo(r'D:\renaming\data\github\\' + repo, r'D:\renaming\data\real\\' + repo)
