@@ -21,5 +21,41 @@ int a = 1;";
 			Assert.Equal(0, t.TokenIndex);
 			Assert.True(t.StartIndex > 0, "Although comments are skipped, the char index of the first token should not be 0.");
 		}
+
+		[Fact]
+		public void TestConsumeIncompleteComment()
+		{
+			var lexer = new JavaLexer(CharStreams.fromString("/*"));
+			var tokens = new CommonTokenStream(lexer);
+			tokens.Fill();
+			Assert.True(tokens.Size > 0);
+		}
+
+		[Fact]
+		public void TestStopNull()
+		{
+			JavaParser parser = new JavaParser(new CommonTokenStream(new JavaLexer(CharStreams.fromString("/**/"))));
+			var tree = parser.compilationUnit();
+			Assert.Equal(IntStreamConstants.EOF, tree.Start.Type);
+			Assert.Null(tree.Stop);
+
+
+			var tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString("{ /**/")));
+			tokens.Seek(1);
+			parser = new JavaParser(tokens);
+			tree = parser.compilationUnit();
+			Assert.Equal(IntStreamConstants.EOF, tree.Start.Type);
+			//If the rule matches nothing, Stop is before Start. If there is nothing before Start, Stop then is null.
+			Assert.Equal("{", tree.Stop.Text);
+		}
+
+		[Fact]
+		public void TestUnableToDetermineStop()
+		{
+			JavaParser parser = new JavaParser(new CommonTokenStream(new JavaLexer(CharStreams.fromString("/**/"))));
+			var tree = parser.compilationUnit();
+			Assert.Equal(IntStreamConstants.EOF, tree.Start.Type);
+			Assert.Null(tree.Stop);
+		}
 	}
 }
