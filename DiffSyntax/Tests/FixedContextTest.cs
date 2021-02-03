@@ -6,7 +6,7 @@ using DiffSyntax;
 using DiffSyntax.Antlr;
 using Xunit;
 
-namespace Tests
+namespace DiffSyntax.Tests
 {
 	public class FixedContextTest
 	{

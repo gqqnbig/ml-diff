@@ -50,6 +50,7 @@ namespace DiffSyntax
 				if (Context.exception == null && (other.Context == null || other.Context.exception != null))
 					return true;
 
+				return false;
 			}
 
 			if (IsCommentTokenAppended && other.IsFixedByLexer == false)
@@ -70,6 +71,7 @@ namespace DiffSyntax
 				if (Context.exception == null && (other.Context == null || other.Context.exception != null))
 					return true;
 
+				return false;
 			}
 
 			throw new NotSupportedException();

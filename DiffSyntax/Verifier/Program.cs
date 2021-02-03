@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Diagnostics;
+using Antlr4.Runtime;
+using DiffSyntax.Antlr;
 using Microsoft.Extensions.Logging;
 
 namespace DiffSyntax

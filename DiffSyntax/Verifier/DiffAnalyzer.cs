@@ -176,14 +176,14 @@ namespace DiffSyntax
 					alternativeTree.Tokens = tokens3;
 				}
 
-				if (alternativeTree!=null && alternativeTree.IsBetterThan(tree))
+				if (alternativeTree != null && alternativeTree.IsBetterThan(tree))
 					tree = alternativeTree;
 
 
 				if (tree.Context != null && tree.Context.Start.Type == IntStreamConstants.EOF)
 				{
 					//Input steam is all comment
-					Debug.Assert(tree.Context.Stop == null);
+					Debug.Assert(tree.Context.Stop == null || tree.Context.Stop.TokenIndex < tree.Context.Start.TokenIndex);
 					break;
 				}
 
@@ -262,7 +262,7 @@ namespace DiffSyntax
 
 
 		[return: NotNull]
-		private FixedContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
+		public FixedContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
 		{
 			FixedContext longestTree = new FixedContext();
 
@@ -319,7 +319,7 @@ namespace DiffSyntax
 						{
 							logger.LogDebug("{0} stoped at the end of input. The input is an incomplete syntax unit.", ruleName);
 
-							Debug.Assert(recongnitionException.OffendingToken.StartIndex >= longestTree.Context?.Stop.StopIndex);
+							Debug.Assert(longestTree.Context?.Stop == null || recongnitionException.OffendingToken.StartIndex >= longestTree.Context.Stop.StopIndex);
 							longestTree.Context = context;
 							break;
 						}

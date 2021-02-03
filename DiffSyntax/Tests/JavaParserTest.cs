@@ -2,7 +2,7 @@
 using DiffSyntax.Antlr;
 using Xunit;
 
-namespace Tests
+namespace DiffSyntax.Tests
 {
 	public class JavaParserTest
 	{
