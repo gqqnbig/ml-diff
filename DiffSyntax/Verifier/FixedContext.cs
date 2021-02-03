@@ -10,12 +10,12 @@ namespace DiffSyntax
 		public ParserRuleContext Context { get; set; }
 
 		//public bool IsAutoFixed { get; set; } = false;
-		public bool IsCommentTokenPrepended { get; set; }
-		public bool IsCommentTokenAppended { get; set; }
+		public bool IsBeginningFixed { get; set; }
+		public bool IsEndingFixed { get; set; }
 
-		public bool IsFixedByParser { get; set; }
+		//public bool IsFixedByParser { get; set; }
 
-		public bool IsFixedByLexer => IsCommentTokenPrepended || IsCommentTokenAppended;
+		public bool IsFixedByLexer => IsBeginningFixed || IsEndingFixed;
 
 		/// <summary>
 		/// The number of characters inserted to the beginning of the underlying stream.
@@ -32,7 +32,7 @@ namespace DiffSyntax
 			if (Context == null)
 				return false;
 
-			if (IsCommentTokenPrepended && other.IsFixedByLexer == false)
+			if (IsBeginningFixed && other.IsFixedByLexer == false)
 			{
 				if (Context.Start.Type == IntStreamConstants.EOF)
 					return true;
@@ -53,7 +53,7 @@ namespace DiffSyntax
 				return false;
 			}
 
-			if (IsCommentTokenAppended && other.IsFixedByLexer == false)
+			if (IsEndingFixed && other.IsFixedByLexer == false)
 			{
 				if (Context.Start.Type == IntStreamConstants.EOF)
 					return true;

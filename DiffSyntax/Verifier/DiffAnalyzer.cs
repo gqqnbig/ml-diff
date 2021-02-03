@@ -135,7 +135,6 @@ namespace DiffSyntax
 
 			bool isBeginningFixTried = false;
 			bool isEndingFixTried = false;
-			int insertedTokens = 0; //follow single insertion rule.
 
 			int startToken = Helper.FindNextToken(tokens).TokenIndex;
 			for (; ; )
@@ -155,24 +154,25 @@ namespace DiffSyntax
 				logger.LogInformation("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
 
 
-				var tree = FindLongestTree(startToken, tokens, insertedTokens == 0, insertedTokens == 0);
+				var tree = FindLongestTree(startToken, tokens, isBeginningFixTried, isEndingFixTried);
 				FixedContext alternativeTree = null;
-				if (isBeginningFixTried == false && javaSnippet.Contains("*/") && insertedTokens == 0)
+				if (isBeginningFixTried == false && javaSnippet.Contains("*/"))
 				{
 					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
 					alternativeTree = FindLongestTree(0, tokens2, false, false);
 					alternativeTree.CharIndexOffset = 2;
 					alternativeTree.FixDescription = "Token \"/*\" is missing at the beginning.";
-					alternativeTree.IsCommentTokenPrepended = true;
+					Debug.Assert(alternativeTree.IsBeginningFixed == false, "FindLongestTree is not allowed to fix beginning.");
+					alternativeTree.IsBeginningFixed = true;
 					alternativeTree.Tokens = tokens2;
 				}
-				else if (isEndingFixTried == false && javaSnippet.Contains("/*") && insertedTokens == 0)
+				else if (isEndingFixTried == false && javaSnippet.Contains("/*"))
 				{
 					CommonTokenStream tokens3 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
 					alternativeTree = FindLongestTree(startToken, tokens3, false, false);
 					alternativeTree.FixDescription = "Token \"*/\" is missing at the end.";
-					alternativeTree.IsCommentTokenAppended = true;
+					alternativeTree.IsEndingFixed = true;
 					alternativeTree.Tokens = tokens3;
 				}
 
@@ -195,17 +195,12 @@ namespace DiffSyntax
 					if (string.IsNullOrEmpty(tree.FixDescription) == false)
 						logger.LogInformation(tree.FixDescription);
 
-					if (tree.IsFixedByLexer || tree.IsFixedByParser)
-					{
-						insertedTokens++;
-
-						if (tree.Tokens != null)
-							tokens = tree.Tokens;
-						if (tree.IsCommentTokenPrepended)
-							isBeginningFixTried = true;
-						if (tree.IsCommentTokenAppended)
-							isEndingFixTried = true;
-					}
+					if (tree.Tokens != null)
+						tokens = tree.Tokens;
+					if (tree.IsBeginningFixed)
+						isBeginningFixTried = true;
+					if (tree.IsEndingFixed)
+						isEndingFixTried = true;
 				}
 			}
 			return identifierDeclarations;
@@ -264,7 +259,7 @@ namespace DiffSyntax
 		[return: NotNull]
 		public FixedContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
 		{
-			FixedContext longestTree = new FixedContext();
+			FixedContext longestTree = null;
 
 			foreach (string ruleName in JavaParser.ruleNames)
 			{
@@ -273,11 +268,12 @@ namespace DiffSyntax
 				ErrorListener errorListener = new ErrorListener();
 				try
 				{
+					FixedContext c = new FixedContext();
 					JavaParser parser = new JavaParser(tokens);
 					parser.RemoveErrorListeners();
 					if (canFixBeginning || canFixEnding)
 					{
-						parser.ErrorHandler = new IncompleteSnippetStrategy(canFixBeginning, canFixEnding);
+						parser.ErrorHandler = new IncompleteSnippetStrategy(c, canFixBeginning, canFixEnding);
 						parser.AddErrorListener(errorListener);
 					}
 					else
@@ -288,23 +284,23 @@ namespace DiffSyntax
 
 					var m = typeof(JavaParser).GetMethod(ruleName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 					Debug.Assert(m != null);
-					ParserRuleContext context = (ParserRuleContext)m.Invoke(parser, new object[0]);
+					c.Context = (ParserRuleContext)m.Invoke(parser, new object[0]);
 
-					if (context == null)
+					if (c.Context == null)
 					{
 						logger.LogDebug("{0} is not a match.", ruleName);
 					}
-					else if (context.Start.Type == IntStreamConstants.EOF)
+					else if (c.Context.Start.Type == IntStreamConstants.EOF)
 					{
 						logger.LogDebug("Input stream is all comment.");
-						return new FixedContext { Context = context };
+						return c;
 					}
 					else
 					{
-						logger.LogDebug("{0} produced a full match, stoped at {1}.", ruleName, context.SourceInterval.b);
-						if (longestTree.Context == null || context.SourceInterval.b > longestTree.Context.SourceInterval.b)
+						logger.LogDebug("{0} produced a full match, stopped at {1}.", ruleName, c.Context.SourceInterval.b);
+						if (longestTree?.Context == null || c.Context.SourceInterval.b > longestTree.Context.SourceInterval.b)
 						{
-							longestTree.Context = context;
+							longestTree = c;
 						}
 					}
 				}
@@ -312,24 +308,24 @@ namespace DiffSyntax
 				{
 					if (e.InnerException is ParseCanceledException)
 					{
-						RecognitionException recongnitionException = (RecognitionException)e.InnerException.InnerException;
-						ParserRuleContext context = (ParserRuleContext)recongnitionException.Context;
+						RecognitionException recognitionException = (RecognitionException)e.InnerException.InnerException;
+						ParserRuleContext context = (ParserRuleContext)recognitionException.Context;
 
-						if (recongnitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
+						if (recognitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
 						{
-							logger.LogDebug("{0} stoped at the end of input. The input is an incomplete syntax unit.", ruleName);
+							logger.LogDebug("{0} stopped at the end of input. The input is an incomplete syntax unit.", ruleName);
 
-							Debug.Assert(longestTree.Context?.Stop == null || recongnitionException.OffendingToken.StartIndex >= longestTree.Context.Stop.StopIndex);
-							longestTree.Context = context;
+							Debug.Assert(longestTree?.Context?.Stop == null || recognitionException.OffendingToken.StartIndex >= longestTree.Context.Stop.StopIndex);
+							longestTree = new FixedContext { Context = context };
 							break;
 						}
 						else
 						{
 							logger.LogDebug($"{ruleName} match up to {0}, and IsEmpty={1}.", context.SourceInterval.b, context.IsEmpty);
 							//context.SourceInterval.b cannot be null, while context.Stop may be.
-							if (longestTree.Context == null || context.SourceInterval.b > longestTree.Context.SourceInterval.b)
+							if (longestTree?.Context == null || context.SourceInterval.b > longestTree.Context.SourceInterval.b)
 							{
-								longestTree.Context = context;
+								longestTree = new FixedContext { Context = context };
 							}
 						}
 					}

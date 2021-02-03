@@ -26,7 +26,7 @@ namespace DiffSyntax.Tests
 			JavaParser parser2 = new JavaParser(tokens2);
 
 			var t2 = new FixedContext { Context = parser2.compilationUnit() };
-			t2.IsCommentTokenAppended = true;
+			t2.IsEndingFixed = true;
 			t2.Tokens = tokens2;
 
 
@@ -49,7 +49,7 @@ namespace DiffSyntax.Tests
 			JavaParser parser2 = new JavaParser(tokens2);
 
 			var t2 = new FixedContext { Context = parser2.compilationUnit() };
-			t2.IsCommentTokenPrepended = true;
+			t2.IsBeginningFixed = true;
 			t2.Tokens = tokens2;
 
 			Assert.True(t2.IsBetterThan(t1), $"Prepend \"/*\" to \"{input}\" is better.");

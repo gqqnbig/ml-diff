@@ -59,6 +59,22 @@ class PodcastViewHolder {
 		}
 
 		[Fact]
+		public void TestCompleteCommentAndIncompleteComment2()
+		{
+			string javaSnippet = @"
+ * @return the associated subscriber
+ * @throws IllegalStateException if another consumer is already associated with the given stream name
+ */
+CamelSubscriber attachCamelConsumer(String name, ReactiveStreamsConsumer consumer);
+
+/**
+ * Used by Camel to detach the existing consumer from the given stream.";
+
+			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(javaSnippet);
+			Assert.Equal(3, identifiers.Count);
+		}
+
+		[Fact]
 		public void TestFindLongestTree()
 		{
 			string javaSnippet = @"
@@ -76,9 +92,11 @@ private class FailedDownloadHandler implements Runnable {
 
 		}
 
+
 		[Theory]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff")]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\118d9103c124700d82f5f50e2b8a7b2b8a5cb4ad.diff")]
+		[InlineData(@"D:\renaming\data\real\camel\000e09a80874cc6b3ee748504611d4bb45be3483.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);

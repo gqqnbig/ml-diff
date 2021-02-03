@@ -6,19 +6,25 @@ using System.Text;
 
 namespace DiffSyntax.Parser
 {
-	class IncompleteSnippetStrategy : DefaultErrorStrategy
+	public class IncompleteSnippetStrategy : DefaultErrorStrategy
 	{
-		public IncompleteSnippetStrategy(bool canFixBeginning, bool canFixEnding)
-		{
-			this.canFixBeginning = canFixBeginning;
-			this.canFixEnding = canFixEnding;
-		}
-
 		int firstValidToken = -1;
 		int lastValidToken = -1;
 		int notLastToken = -1;
 		private readonly bool canFixBeginning;
 		private readonly bool canFixEnding;
+		private readonly FixedContext fixedContext;
+
+		//public bool IsBeginningFixed { get; private set; }
+		//public bool IsEndingFixed { get; private set; }
+
+		public IncompleteSnippetStrategy(FixedContext fixedContext, bool canFixBeginning, bool canFixEnding)
+		{
+			this.fixedContext = fixedContext;
+			this.canFixBeginning = canFixBeginning;
+			this.canFixEnding = canFixEnding;
+		}
+
 
 		public override IToken RecoverInline(Antlr4.Runtime.Parser recognizer)
 		{
@@ -42,7 +48,10 @@ namespace DiffSyntax.Parser
 				if (currentIndex == lastValidToken)
 				{
 					if (SingleTokenInsertion(recognizer))
+					{
+						fixedContext.IsEndingFixed = true;
 						return GetMissingSymbol(recognizer);
+					}
 				}
 			}
 
@@ -57,7 +66,10 @@ namespace DiffSyntax.Parser
 			if (currentIndex == firstValidToken && canFixBeginning)
 			{
 				if (SingleTokenInsertion(recognizer))
+				{
+					fixedContext.IsBeginningFixed = true;
 					return GetMissingSymbol(recognizer);
+				}
 			}
 
 			throw new InputMismatchException(recognizer);
@@ -72,9 +84,6 @@ namespace DiffSyntax.Parser
 			throw new ParseCanceledException(e);
 		}
 
-		public override void Sync(Antlr4.Runtime.Parser recognizer)
-		{
-			//base.Sync(recognizer);
-		}
+		public override void Sync(Antlr4.Runtime.Parser recognizer) { }
 	}
 }
