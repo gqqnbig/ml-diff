@@ -5,11 +5,11 @@
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="cd /d &quot;$(ProjectDir)&quot;&#xD;&#xA;set CLASSPATH=.;$(ProjectDir)antlr-4.9.1-complete.jar;%25CLASSPATH%25&#xD;&#xA;antlr4.bat -Dlanguage=CSharp  -no-listener -o generated -package DiffSyntax.Antlr  JavaLexer.g4 JavaParser.g4" />
+    <Exec Command="cd /d &quot;$(ProjectDir)&quot;&#xD;&#xA;set CLASSPATH=.;$(ProjectDir)antlr-4.9.1-complete.jar;%25CLASSPATH%25&#xD;&#xA;antlr4.bat -Dlanguage=CSharp  -no-listener -visitor -o generated -package DiffSyntax.Antlr  JavaLexer.g4 JavaParser.g4" />
   </Target>
   <!-- Using target AfterClean is ideal, but this target doesn't run. -->
   <Target Name="RemoveGenerated" AfterTargets="Clean">
-    <RemoveDir Directories="$(ProjectDir)generated"/>
+    <RemoveDir Directories="$(ProjectDir)generated" />
   </Target>
 
   <ItemGroup>

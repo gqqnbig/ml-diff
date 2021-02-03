@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using JetBrains.Annotations;
 using Antlr4.Runtime;
 
@@ -25,27 +26,53 @@ namespace DiffSyntax
 
 		public CommonTokenStream Tokens { get; set; }
 
-		public bool IsBetterThan(FixedContext c)
+
+		public bool IsBetterThan(FixedContext other)
 		{
-			if(Context!=null && Context.exception==null && Context.Stop!=null && Tokens.GetTokens(Context.Stop.TokenIndex,)
+			if (Context == null)
+				return false;
 
-
-			if (c.Context == null)
-				return true;
-
-			//There is an exception causing parser return, and parser cannot determine an end.
-			if (c.Context.exception != null && c.Context.Stop == null)
-				return true;
-
-			if (Context != null)
+			if (IsCommentTokenPrepended && other.IsFixedByLexer == false)
 			{
-				if (Context.Start.Type == IntStreamConstants.EOF ||
-					Context.SourceInterval.b - CharIndexOffset > c.Context.SourceInterval.b - CharIndexOffset)
+				if (Context.Start.Type == IntStreamConstants.EOF)
 					return true;
 
-				if (Context.exception == null && c.Context.exception != null)
+				if (Context.Stop == null) //Unable to determine the stop
+					return false;
+
+				if (Context.Stop.StopIndex - 2 > other.Context?.Stop?.StopIndex)
 					return true;
+
+				Tokens.Seek(Context.Stop.TokenIndex + 1);
+				if (Tokens.LA(1) == IntStreamConstants.EOF) //this matches to the end.
+					return true;
+
+				if (Context.exception == null && (other.Context == null || other.Context.exception != null))
+					return true;
+
 			}
+
+			if (IsCommentTokenAppended && other.IsFixedByLexer == false)
+			{
+				if (Context.Start.Type == IntStreamConstants.EOF)
+					return true;
+
+				if (Context.Stop == null) //Unable to determine the stop
+					return false;
+
+				if (Context.Stop.StopIndex - 2 > other.Context?.Stop?.StopIndex)
+					return true;
+
+				Tokens.Seek(Context.Stop.TokenIndex + 1);
+				if (Tokens.LA(1) == IntStreamConstants.EOF) //this matches to the end.
+					return true;
+
+				if (Context.exception == null && (other.Context == null || other.Context.exception != null))
+					return true;
+
+			}
+
+			throw new NotSupportedException();
 
 			return false;
 		}

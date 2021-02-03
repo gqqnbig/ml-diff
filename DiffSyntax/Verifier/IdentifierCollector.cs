@@ -1,7 +1,8 @@
 ﻿using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using System.Collections.Generic;
-using static JavaParser;
+using DiffSyntax.Antlr;
+using static DiffSyntax.Antlr.JavaParser;
 
 namespace DiffSyntax
 {

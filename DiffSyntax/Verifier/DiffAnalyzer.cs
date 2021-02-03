@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using DiffSyntax.Antlr;
 using DiffSyntax.Parser;
 using Microsoft.Extensions.Logging;
 
@@ -155,29 +156,29 @@ namespace DiffSyntax
 
 
 				var tree = FindLongestTree(startToken, tokens, insertedTokens == 0, insertedTokens == 0);
-				FixedContext tree2 = null;
-				FixedContext tree3 = null;
-				if (insertedTokens == 0 && isBeginningFixTried == false)
+				FixedContext alternativeTree = null;
+				if (isBeginningFixTried == false && javaSnippet.Contains("*/") && insertedTokens == 0)
 				{
 					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
-					tree2 = FindLongestTree(0, tokens2, false, false);
-					tree2.CharIndexOffset = 2;
-					tree2.FixDescription = "Token \"/*\" is missing at the beginning.";
-					tree2.IsCommentTokenPrepended = true;
-					tree2.Tokens = tokens2;
+					alternativeTree = FindLongestTree(0, tokens2, false, false);
+					alternativeTree.CharIndexOffset = 2;
+					alternativeTree.FixDescription = "Token \"/*\" is missing at the beginning.";
+					alternativeTree.IsCommentTokenPrepended = true;
+					alternativeTree.Tokens = tokens2;
 				}
-				if (isEndingFixTried == false && insertedTokens == 0)
+				else if (isEndingFixTried == false && javaSnippet.Contains("/*") && insertedTokens == 0)
 				{
-					//isEndingFixTried = true;
 					CommonTokenStream tokens3 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
-					tree3 = FindLongestTree(startToken, tokens3, false, false);
-					tree3.FixDescription = "Token \"*/\" is missing at the end.";
-					tree3.IsCommentTokenAppended = true;
-					tree3.Tokens = tokens3;
+					alternativeTree = FindLongestTree(startToken, tokens3, false, false);
+					alternativeTree.FixDescription = "Token \"*/\" is missing at the end.";
+					alternativeTree.IsCommentTokenAppended = true;
+					alternativeTree.Tokens = tokens3;
 				}
 
-				tree = FixedContext.FindBest(tree, tree2, tree3);
+				if (alternativeTree!=null && alternativeTree.IsBetterThan(tree))
+					tree = alternativeTree;
+
 
 				if (tree.Context != null && tree.Context.Start.Type == IntStreamConstants.EOF)
 				{
@@ -206,26 +207,6 @@ namespace DiffSyntax
 							isEndingFixTried = true;
 					}
 				}
-				//else if (isTreeUseful == false && isEndingFixTried == false && insertedTokens == 0)
-				//{
-				//	isEndingFixTried = true;
-				//	CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
-				//	var tree2 = FindLongestTree(previousStartToken, tokens2, false, false);
-
-				//	if (tree2.IsBetterThan(tree))
-				//	{
-				//		logger.LogInformation("Token \"*/\" is missing at the end.");
-				//		tree = tree2;
-
-				//		javaSnippet = javaSnippet + "*/";
-				//		tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
-
-				//		insertedTokens++;
-
-				//		startToken = previousStartToken;
-				//		CheckTree(tree.Context, tokens, identifierDeclarations, ref startToken);
-				//	}
-				//}
 			}
 			return identifierDeclarations;
 		}
