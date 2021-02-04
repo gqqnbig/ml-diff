@@ -3,6 +3,8 @@ using DiffSyntax.Antlr;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
+using System.Linq;
 
 namespace DiffSyntax.Tests
 {
@@ -25,14 +27,32 @@ namespace DiffSyntax.Tests
 				}).CreateLogger("DiffAnalyzer");
 		}
 
+		/// <summary>
+		/// In this test, Antlr cannot determine the Stop of the context without prepending /*.
+		/// </summary>
 		[Fact]
-		public void DoSomeTest()
+		public void TestNullStopWithoutFix()
 		{
-			// Arrange
-			// Act
-			// Assert
-			logger.LogInformation("Hello world!");
+			string input = @"
+* file) into a well formed HTML document which can then be sent to XSLT or
+* xpath'ed on.
+*/
+@Component(""tidyMarkup"")
+public class TidyMarkupDataFormat extends ServiceSupport implements DataFormat, DataFormatName {
+/*";
+			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
+			if (identifiers.Count == 1)
+			{
+				Assert.Equal("TidyMarkupDataFormat", identifiers[0].Name);
+			}
+			else
+			{
+				throw new XunitException("Expect TidyMarkupDataFormat but actual is "
+										 + string.Join(", ", from id in identifiers
+															 select id.Name));
+			}
 		}
+
 
 		[Fact]
 		public void TestMissingEndSymbol()
@@ -45,9 +65,9 @@ namespace DiffSyntax.Tests
 		public void TestCompleteCommentAndIncompleteComment()
 		{
 			string input = @"
-/**
- * View holder object for the GridView
- */
+	   /**
+		* View holder object for the GridView
+		*/
 class PodcastViewHolder {
 
     /**
@@ -97,6 +117,8 @@ private class FailedDownloadHandler implements Runnable {
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff")]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\118d9103c124700d82f5f50e2b8a7b2b8a5cb4ad.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\000e09a80874cc6b3ee748504611d4bb45be3483.diff")]
+		//[InlineData(@"D:\renaming\data\real\camel\001a5bcbd32d839bb39b7a1ffd52156d55495b85.diff")]
+		[InlineData(@"D:\renaming\data\real\camel\041bda6ecc320200f85b9597e8826940f53fd6bd.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);

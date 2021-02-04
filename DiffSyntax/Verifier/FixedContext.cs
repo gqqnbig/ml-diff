@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using JetBrains.Annotations;
 using Antlr4.Runtime;
 
 namespace DiffSyntax
@@ -24,7 +22,16 @@ namespace DiffSyntax
 
 		public string FixDescription { get; set; }
 
-		public CommonTokenStream Tokens { get; set; }
+		public CommonTokenStream Tokens { get; private set; }
+
+		public string Input { get; private set; }
+
+
+		public void SetInput(string input, CommonTokenStream tokens)
+		{
+			Tokens = tokens;
+			Input = input;
+		}
 
 
 		public bool IsBetterThan(FixedContext other)
@@ -37,10 +44,11 @@ namespace DiffSyntax
 				if (Context.Start.Type == IntStreamConstants.EOF)
 					return true;
 
-				if (Context.Stop == null) //Unable to determine the stop
+				if (Context.Stop == null) //this context is unable to determine the stop
 					return false;
 
-				if (Context.Stop.StopIndex - 2 > other.Context?.Stop?.StopIndex)
+				//other context is unable to determine stop.
+				if (other.Context?.Stop?.StopIndex == null || Context.Stop.StopIndex - 2 > other.Context.Stop.StopIndex)
 					return true;
 
 				Tokens.Seek(Context.Stop.TokenIndex + 1);
@@ -79,18 +87,5 @@ namespace DiffSyntax
 			return false;
 		}
 
-		public static FixedContext FindBest(params FixedContext[] contexts)
-		{
-			Debug.Assert(contexts?.Length > 0);
-
-			FixedContext best = contexts[0];
-			for (int i = 1; i < contexts.Length; i++)
-			{
-				if (contexts[i]?.IsBetterThan(best) ?? false)
-					best = contexts[i];
-			}
-
-			return best;
-		}
 	}
 }

@@ -165,7 +165,7 @@ namespace DiffSyntax
 					alternativeTree.FixDescription = "Token \"/*\" is missing at the beginning.";
 					Debug.Assert(alternativeTree.IsBeginningFixed == false, "FindLongestTree is not allowed to fix beginning.");
 					alternativeTree.IsBeginningFixed = true;
-					alternativeTree.Tokens = tokens2;
+					alternativeTree.SetInput("/*" + javaSnippet, tokens2);
 				}
 				else if (isEndingFixTried == false && javaSnippet.Contains("/*"))
 				{
@@ -173,7 +173,7 @@ namespace DiffSyntax
 					alternativeTree = FindLongestTree(startToken, tokens3, false, false);
 					alternativeTree.FixDescription = "Token \"*/\" is missing at the end.";
 					alternativeTree.IsEndingFixed = true;
-					alternativeTree.Tokens = tokens3;
+					alternativeTree.SetInput(javaSnippet + "*/", tokens3);
 				}
 
 				if (alternativeTree != null && alternativeTree.IsBetterThan(tree))
@@ -196,7 +196,13 @@ namespace DiffSyntax
 						logger.LogInformation(tree.FixDescription);
 
 					if (tree.Tokens != null)
+					{
 						tokens = tree.Tokens;
+						tokens.Fill();
+						javaSnippet = tree.Input;
+					}
+
+
 					if (tree.IsBeginningFixed)
 						isBeginningFixTried = true;
 					if (tree.IsEndingFixed)
