@@ -62,7 +62,8 @@ namespace DiffSyntax
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
 			if (context.typeParameters() != null)
 				Visit(context.typeParameters());
-			Visit(context.interfaceBody());
+			if (context.interfaceBody() != null)
+				Visit(context.interfaceBody());
 
 			return null;
 		}
@@ -71,7 +72,8 @@ namespace DiffSyntax
 		{
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
 			Visit(context.formalParameters());
-			Visit(context.methodBody());
+			if (context.methodBody() != null)
+				Visit(context.methodBody());
 			return null;
 		}
 

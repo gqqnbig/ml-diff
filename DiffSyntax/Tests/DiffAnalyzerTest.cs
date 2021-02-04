@@ -132,6 +132,7 @@ public interface TimeClient {
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\118d9103c124700d82f5f50e2b8a7b2b8a5cb4ad.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\000e09a80874cc6b3ee748504611d4bb45be3483.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\041bda6ecc320200f85b9597e8826940f53fd6bd.diff")]
+		[InlineData(@"D:\renaming\data\real\camel\44883d06903d1cf6d034917e123ce45f21f504d4.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);
