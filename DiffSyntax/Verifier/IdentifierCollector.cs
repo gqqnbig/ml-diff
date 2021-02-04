@@ -1,6 +1,7 @@
 ﻿using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using System.Collections.Generic;
+using System.Diagnostics;
 using DiffSyntax.Antlr;
 using static DiffSyntax.Antlr.JavaParser;
 
@@ -84,10 +85,15 @@ namespace DiffSyntax
 
 		public override object VisitInterfaceMethodDeclaration([NotNull] InterfaceMethodDeclarationContext context)
 		{
+			foreach (var c in context.interfaceMethodModifier())
+				Visit(c);
 			if (context.typeParameters() != null)
 				Visit(context.typeParameters());
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
-			Visit(context.methodBody());
+
+			Debug.Assert(context.exception == null || context.methodBody() != null, "If an exception causes the rule to return, there may be some essential parts missing.");
+			if (context.methodBody() != null)
+				Visit(context.methodBody());
 			return null;
 		}
 
@@ -108,9 +114,16 @@ namespace DiffSyntax
 			return null;
 		}
 
+		public override object VisitInterfaceMethodModifier([NotNull] InterfaceMethodModifierContext context)
+		{
+			if (context.DEFAULT() != null)
+				throw new System.NotSupportedException("Didn't intent to support Java 8");
+			return null;
+		}
+
 		public override object VisitLambdaParameters([NotNull] LambdaParametersContext context)
 		{
-			throw new System.NotSupportedException("Did't intent to support Java 8");
+			throw new System.NotSupportedException("Didn't intent to support Java 8");
 		}
 	}
 }

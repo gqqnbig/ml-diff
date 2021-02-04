@@ -113,11 +113,24 @@ private class FailedDownloadHandler implements Runnable {
 		}
 
 
+		[Fact]
+		public void TestNotSupportJava8()
+		{
+			string input = @"
+public interface TimeClient {
+    default ZonedDateTime getZonedDateTime(String zoneString) {
+        return ZonedDateTime.of(getLocalDateTime(), getZoneId(zoneString));
+    }
+}";
+			Assert.Throws<System.NotSupportedException>(() => new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input));
+
+		}
+
+
 		[Theory]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff")]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\118d9103c124700d82f5f50e2b8a7b2b8a5cb4ad.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\000e09a80874cc6b3ee748504611d4bb45be3483.diff")]
-		//[InlineData(@"D:\renaming\data\real\camel\001a5bcbd32d839bb39b7a1ffd52156d55495b85.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\041bda6ecc320200f85b9597e8826940f53fd6bd.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
