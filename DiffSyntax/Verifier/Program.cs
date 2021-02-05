@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 using Antlr4.Runtime;
 using DiffSyntax.Antlr;
-using Microsoft.Extensions.Logging;
 
 namespace DiffSyntax
 {
@@ -63,68 +64,40 @@ namespace DiffSyntax
 
 			var diffAnalyzer = new DiffAnalyzer();
 
-			using (var sr = new StreamReader(Path.Join(baseFolder, repo + ".txt")))
+			string[] lines = File.ReadAllLines(Path.Join(baseFolder, repo + ".txt"));
+			Parallel.ForEach(lines, line =>
 			{
-				string line;
-				while ((line = sr.ReadLine()) != null)
+				//throw new Exception();
+				var parts = line.Split('|');
+				var sha = parts[0];
+				var extra = parts[1];
+				var guessedLabel = parts[2];
+
+				if (guessedLabel == "y" || guessedLabel == "skip")
 				{
-					var parts = line.Split('|');
-					var sha = parts[0];
-					var extra = parts[1];
-					var guessedLabel = parts[2];
-
-					if (guessedLabel == "y" || guessedLabel == "skip")
+					var diffPath = Path.Join(repoFolder, sha + ".diff");
+					try
 					{
-						var diffPath = Path.Join(repoFolder, sha + ".diff");
-						try
+						if (diffAnalyzer.CheckIdentifierChanges(diffPath))
 						{
-
-							if (diffAnalyzer.CheckIdentifierChanges(diffPath))
-							{
-								File.Copy(diffPath, Path.Join(targetFolder, "yes", Path.GetFileName(diffPath)));
-							}
-							else
-							{
-								File.Copy(diffPath, Path.Join(targetFolder, "no", Path.GetFileName(diffPath)));
-							}
+							File.Copy(diffPath, Path.Join(targetFolder, "yes", Path.GetFileName(diffPath)));
 						}
-						catch (NotSupportedException e)
+						else
 						{
-							logger.LogWarning($"{diffPath} caused error:\n{e.Message}");
-						}
-						catch (Exception e)
-						{
-							logger.LogError(new EventId(0), e, $"{diffPath} caused error:\n{e.Message}", new object[0]);
-							throw;
+							File.Copy(diffPath, Path.Join(targetFolder, "no", Path.GetFileName(diffPath)));
 						}
 					}
+					catch (NotSupportedException e)
+					{
+						logger.LogWarning($"{diffPath} caused error:\n{e.Message}");
+					}
+					catch (Exception e)
+					{
+						logger.LogError(new EventId(0), e, $"{diffPath} caused error:\n{e.Message}", new object[0]);
+						throw;
+					}
 				}
-			}
-
-
-			//foreach (string path in System.IO.Directory.EnumerateFiles(folder, "*.diff", SearchOption.TopDirectoryOnly))
-			//{
-			//	try
-			//	{
-			//		if (diffAnalyzer.CheckIdentifierChanges(path))
-			//		{
-			//			File.Copy(path, Path.Join(target, "yes", Path.GetFileName(path)));
-			//		}
-			//		else
-			//		{
-			//			File.Copy(path, Path.Join(target, "no", Path.GetFileName(path)));
-			//		}
-			//	}
-			//	catch (NotSupportedException e)
-			//	{
-			//		logger.LogWarning($"{path} caused error:\n{e.Message}");
-			//	}
-			//	catch (Exception e)
-			//	{
-			//		logger.LogError(new EventId(0), e, $"{path} caused error:\n{e.Message}", new object[0]);
-			//		return;
-			//	}
-			//}
+			});
 		}
 
 		private static void CheckExamples()
