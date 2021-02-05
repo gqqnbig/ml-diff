@@ -1,10 +1,7 @@
 using Antlr4.Runtime;
-using DiffSyntax.Antlr;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
-using System.Linq;
 using DiffSyntax.Parser;
 
 namespace DiffSyntax.Tests
@@ -16,43 +13,18 @@ namespace DiffSyntax.Tests
 		public DiffAnalyzerTest(ITestOutputHelper outputHelper)
 		{
 			logger = LoggerFactory.Create(builder =>
-				{
-					builder.AddXunit(outputHelper);
+			{
+				builder.AddXunit(outputHelper);
 #if DEBUG
-					builder.AddDebug();
-					builder.SetMinimumLevel(LogLevel.Debug);
+				builder.AddDebug();
+				builder.SetMinimumLevel(LogLevel.Debug);
 #else
 					builder.SetMinimumLevel(LogLevel.Warning);
 #endif
-					// Add other loggers, e.g.: AddConsole, AddDebug, etc.
-				}).CreateLogger("DiffAnalyzer");
+				// Add other loggers, e.g.: AddConsole, AddDebug, etc.
+			}).CreateLogger("DiffAnalyzer");
 		}
 
-		/// <summary>
-		/// In this test, Antlr cannot determine the Stop of the context without prepending /*.
-		/// </summary>
-		[Fact]
-		public void TestNullStopWithoutFix()
-		{
-			string input = @"
-* file) into a well formed HTML document which can then be sent to XSLT or
-* xpath'ed on.
-*/
-@Component(""tidyMarkup"")
-public class TidyMarkupDataFormat extends ServiceSupport implements DataFormat, DataFormatName {
-/*";
-			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
-			if (identifiers.Count == 1)
-			{
-				Assert.Equal("TidyMarkupDataFormat", identifiers[0].Name);
-			}
-			else
-			{
-				throw new XunitException("Expect TidyMarkupDataFormat but actual is "
-										 + string.Join(", ", from id in identifiers
-															 select id.Name));
-			}
-		}
 
 
 		[Fact]
@@ -60,57 +32,6 @@ public class TidyMarkupDataFormat extends ServiceSupport implements DataFormat, 
 		{
 			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet("int a=1");
 			Assert.Equal(1, identifiers.Count);
-		}
-
-		[Fact(DisplayName ="Test snippet with 2 block comments with the second one incomplete")]
-		public void TestCompleteCommentAndIncompleteComment()
-		{
-			string input = @"
-/**
-* View holder object for the GridView
-*/
-class PodcastViewHolder {
-
-/**
-* ImageView holding the Podcast image
-";
-
-			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
-			Assert.Equal(1, identifiers.Count);
-		}
-
-		[Fact(DisplayName = "Test snippet with 2 block comments with the first one incomplete")]
-		public void TestCompleteCommentAndIncompleteComment2()
-		{
-			string javaSnippet = @"
- * @return the associated subscriber
- * @throws IllegalStateException if another consumer is already associated with the given stream name
- */
-CamelSubscriber attachCamelConsumer(String name, ReactiveStreamsConsumer consumer);
-
-/**
- * Used by Camel to detach the existing consumer from the given stream.";
-
-			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(javaSnippet);
-			Assert.Equal(3, identifiers.Count);
-		}
-
-		[Fact]
-		public void TestFindLongestTree()
-		{
-			string javaSnippet = @"
-* <p/>
- * Currently, this handler only handles FeedMedia objects, because Feeds and FeedImages are deleted if the download fails.
- */
-private class FailedDownloadHandler implements Runnable {
-
-    private DownloadRequest request;
-    private DownloadStatus status;";
-
-			CommonTokenStream tokens2 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
-			new DiffAnalyzer(logger).FindLongestTree(0, tokens2, false, false);
-
-
 		}
 
 
@@ -128,21 +49,6 @@ public interface TimeClient {
 		}
 
 
-		[Fact]
-		public void TestUnrecognizedLexerCharacters()
-		{
-			string input = @"
-# */
-int a=1;
-/* #";
-
-			//CommonTokenStream tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input)));
-			//tokens.Fill();
-
-			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
-
-
-		}
 
 		[Fact]
 		public void TestFindLongestTreeInsertAtEnd()

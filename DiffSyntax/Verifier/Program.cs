@@ -65,8 +65,14 @@ namespace DiffSyntax
 			var diffAnalyzer = new DiffAnalyzer();
 
 			string[] lines = File.ReadAllLines(Path.Join(baseFolder, repo + ".txt"));
+
+#if DEBUG
+			foreach (var line in lines)
+#else
 			Parallel.ForEach(lines, line =>
+#endif
 			{
+
 				//throw new Exception();
 				var parts = line.Split('|');
 				var sha = parts[0];
@@ -76,6 +82,7 @@ namespace DiffSyntax
 				if (guessedLabel == "y" || guessedLabel == "skip")
 				{
 					var diffPath = Path.Join(repoFolder, sha + ".diff");
+					logger.LogDebug($"{diffPath}");
 					try
 					{
 						if (diffAnalyzer.CheckIdentifierChanges(diffPath))
@@ -87,6 +94,10 @@ namespace DiffSyntax
 							File.Copy(diffPath, Path.Join(targetFolder, "no", Path.GetFileName(diffPath)));
 						}
 					}
+					catch (FormatException e)
+					{
+						logger.LogWarning(e.Message);
+					}
 					catch (NotSupportedException e)
 					{
 						logger.LogWarning($"{diffPath} caused error:\n{e.Message}");
@@ -97,7 +108,10 @@ namespace DiffSyntax
 						throw;
 					}
 				}
-			});
+			}
+#if !DEBUG
+			);
+#endif
 		}
 
 		private static void CheckExamples()

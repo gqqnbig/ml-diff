@@ -43,24 +43,30 @@ namespace DiffSyntax
 				string after = t.Item2;
 
 
-				var beforeIdentifiers = FindDeclaredIdentifiersFromSnippet(before);
-				var afterIdentifiers = FindDeclaredIdentifiersFromSnippet(after);
+				try
+				{
+					var beforeIdentifiers = FindDeclaredIdentifiersFromSnippet(before);
+					var afterIdentifiers = FindDeclaredIdentifiersFromSnippet(after);
 
 
-				var ub = new List<IdentifierDeclaration>(beforeIdentifiers);
-				afterIdentifiers.ForEach(l => ub.Remove(l));
-				uniqueInBefore.AddRange(from d in ub
-										select new IdentifierDeclarationInDiff { IdentifierDeclaration = d, SnippetIndex = snippetIndex });
+					var ub = new List<IdentifierDeclaration>(beforeIdentifiers);
+					afterIdentifiers.ForEach(l => ub.Remove(l));
+					uniqueInBefore.AddRange(from d in ub
+											select new IdentifierDeclarationInDiff { IdentifierDeclaration = d, SnippetIndex = snippetIndex });
 
-				var ua = new List<IdentifierDeclaration>(afterIdentifiers);
-				beforeIdentifiers.ForEach(l => ua.Remove(l));
+					var ua = new List<IdentifierDeclaration>(afterIdentifiers);
+					beforeIdentifiers.ForEach(l => ua.Remove(l));
 
-				uniqueInAfter.AddRange(from d in ua
-									   select new IdentifierDeclarationInDiff { IdentifierDeclaration = d, SnippetIndex = snippetIndex });
+					uniqueInAfter.AddRange(from d in ua
+										   select new IdentifierDeclarationInDiff { IdentifierDeclaration = d, SnippetIndex = snippetIndex });
 
-				//logger.LogInformation("Found the following declared identifers: {0}.", string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
-				//																						 select id.Name + " from " + parser.RuleNames[id.Rule]));
-
+					//logger.LogInformation("Found the following declared identifers: {0}.", string.Join(", ", from id in identifierCollector.DeclaredIdentifiers
+					//																						 select id.Name + " from " + parser.RuleNames[id.Rule]));
+				}
+				catch (FormatException e)
+				{
+					throw new FormatException($"Error in parsing snippet {snippetIndex} of {diffPath}. {e.Message}", e);
+				}
 			}
 
 			if (uniqueInBefore.Count == 1 && uniqueInAfter.Count == 1)
@@ -173,6 +179,7 @@ namespace DiffSyntax
 
 		private List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet, CommonTokenStream tokens, bool isBeginningFixTried, bool isEndingFixTried)
 		{
+			int maxAllowedUnmatch = 1;
 
 			List<IdentifierDeclaration> identifierDeclarations = new List<IdentifierDeclaration>();
 			int startToken = Helper.FindNextToken(tokens).TokenIndex;
@@ -246,6 +253,14 @@ namespace DiffSyntax
 						isBeginningFixTried = true;
 					if (tree.IsEndingFixed)
 						isEndingFixTried = true;
+				}
+				else
+				{
+					--maxAllowedUnmatch;
+					if (maxAllowedUnmatch < 0)
+						throw new FormatException("Input is invalid. Is it all comments?");
+					else
+						logger.LogInformation($"Unable to match, advance to next token. maxAllowedUnmatch decreased to {maxAllowedUnmatch}.");
 				}
 			}
 			return identifierDeclarations;
