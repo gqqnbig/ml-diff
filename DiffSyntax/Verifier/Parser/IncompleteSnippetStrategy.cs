@@ -13,13 +13,19 @@ namespace DiffSyntax.Parser
 
 		private static readonly ILogger logger = ApplicationLogging.loggerFactory.CreateLogger(nameof(BailJavaLexer));
 
-		public BailJavaLexer(ICharStream input) : base(input) { }
+		public BailJavaLexer(ICharStream input) : base(input)
+		{
+			RemoveErrorListeners();
+		}
 
 		public override void Recover(LexerNoViableAltException e)
 		{
-			logger.LogWarning(e.Message);
+			//e.Message is Exception of type 'Antlr4.Runtime.LexerNoViableAltException' was thrown.
+			//not useful.
+			//logger.LogWarning(e.Message);
 			throw e;
 		}
+
 	}
 
 
