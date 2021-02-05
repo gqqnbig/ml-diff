@@ -132,16 +132,6 @@ public interface TimeClient {
 		public void TestUnrecognizedLexerCharacters()
 		{
 			string input = @"
- *
- * Callers from UI should use {@link #runImmediate(Context)}, as it will guarantee
- * the refresh be run immediately.
- * @param context
- */
-public static void runOnce(Context context) {
-    Log.d(TAG, ""Run auto update once, as soon as OS allows."");";
-
-
-			input = @"
 # */
 int a=1;
 /* #";
