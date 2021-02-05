@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using DiffSyntax.Antlr;
@@ -48,12 +47,12 @@ namespace DiffSyntax
 				var afterIdentifiers = FindDeclaredIdentifiersFromSnippet(after);
 
 
-				var ub = new List<IdentifierDeclaration>((IEnumerable<IdentifierDeclaration>)beforeIdentifiers);
+				var ub = new List<IdentifierDeclaration>(beforeIdentifiers);
 				afterIdentifiers.ForEach(l => ub.Remove(l));
 				uniqueInBefore.AddRange(from d in ub
 										select new IdentifierDeclarationInDiff { IdentifierDeclaration = d, SnippetIndex = snippetIndex });
 
-				var ua = new List<IdentifierDeclaration>((IEnumerable<IdentifierDeclaration>)afterIdentifiers);
+				var ua = new List<IdentifierDeclaration>(afterIdentifiers);
 				beforeIdentifiers.ForEach(l => ua.Remove(l));
 
 				uniqueInAfter.AddRange(from d in ua
@@ -126,14 +125,14 @@ namespace DiffSyntax
 				yield return diffLines.GetRange(snipetStart, diffLines.Count - snipetStart);
 		}
 
-		private bool IsLexerCorrect(CommonTokenStream tokens)
+		private static bool IsLexerCorrect(CommonTokenStream tokens)
 		{
 			try
 			{
 				tokens.Fill();
 				return true;
 			}
-			catch (LexerNoViableAltException e)
+			catch (LexerNoViableAltException)
 			{
 				return false;
 			}
@@ -142,46 +141,34 @@ namespace DiffSyntax
 
 		public List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet)
 		{
-			bool isBeginningFixTried = false;
-			bool isEndingFixTried = false;
 			CommonTokenStream tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet)));
 
-
-
-			if (IsLexerCorrect(tokens) == false)
+			if (IsLexerCorrect(tokens))
+				return FindDeclaredIdentifiersFromSnippet(javaSnippet, tokens, false, false);
+			
+			tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
+			if (IsLexerCorrect(tokens))
 			{
-				tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
-
-				if (IsLexerCorrect(tokens))
-				{
-					isBeginningFixTried = true;
-					javaSnippet = "/*" + javaSnippet;
-				}
-				else
-				{
-					tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet + "*/")));
-					if (IsLexerCorrect(tokens))
-					{
-						isEndingFixTried = true;
-						javaSnippet = javaSnippet + "*/";
-					}
-					else
-					{
-						tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet + "*/")));
-
-						if (IsLexerCorrect(tokens))
-						{
-							isBeginningFixTried = true;
-							isEndingFixTried = true;
-							javaSnippet = "/*" + javaSnippet + "*/";
-						}
-						else
-							throw new FormatException("The input is not valid Java. Lexer throws error.");
-					}
-				}
+				logger.LogInformation("Token \"/*\" is missing at the beginning.");
+				return FindDeclaredIdentifiersFromSnippet("/*" + javaSnippet, tokens, true, false);
 			}
+			
+			tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet + "*/")));
+			if (IsLexerCorrect(tokens))
+			{
+				logger.LogInformation("Token \"*/\" is missing at the end.");
+				return FindDeclaredIdentifiersFromSnippet(javaSnippet + "*/", tokens, false, true);
+			}
+			
+			tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet + "*/")));
 
-			return FindDeclaredIdentifiersFromSnippet(javaSnippet, tokens, isBeginningFixTried, isEndingFixTried);
+			if (IsLexerCorrect(tokens))
+			{
+				logger.LogInformation("Token \"/*\" is missing at the beginning. Token \"*/\" is missing at the end.");
+				return FindDeclaredIdentifiersFromSnippet("/*" + javaSnippet + "*/", tokens, true, true);
+			}
+			
+			throw new FormatException("The input is not valid Java. Lexer throws error.");
 		}
 
 		private List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet, CommonTokenStream tokens, bool isBeginningFixTried, bool isEndingFixTried)
