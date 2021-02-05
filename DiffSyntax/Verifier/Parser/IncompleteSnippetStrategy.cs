@@ -73,7 +73,9 @@ namespace DiffSyntax.Parser
 					if (SingleTokenInsertion(recognizer))
 					{
 						fixedContext.IsEndingFixed = true;
-						return GetMissingSymbol(recognizer);
+						var missingSymbol = GetMissingSymbol(recognizer);
+						fixedContext.FixDescription = $"Insert {missingSymbol.Text} at end (line {missingSymbol.Line} column {missingSymbol.Column}).";
+						return missingSymbol;
 					}
 				}
 			}
@@ -91,7 +93,9 @@ namespace DiffSyntax.Parser
 				if (SingleTokenInsertion(recognizer))
 				{
 					fixedContext.IsBeginningFixed = true;
-					return GetMissingSymbol(recognizer);
+					var missingSymbol = GetMissingSymbol(recognizer);
+					fixedContext.FixDescription = $"Insert {missingSymbol.Text} at beginning (line {missingSymbol.Line} column {missingSymbol.Column}).";
+					return missingSymbol;
 				}
 			}
 
