@@ -154,6 +154,25 @@ int a=1;
 
 		}
 
+		[Fact]
+		public void TestFindLongestTreeInsertAtEnd()
+		{
+			var analyzer = new DiffAnalyzer(logger);
+			string input = @"/**
+* The Camel subscriber. It bridges messages from reactive streams to Camel routes.
+*/
+public class CamelSubscriber implements Subscriber<Exchange>, Closeable {
+
+private static final Logger LOG = LoggerFactory.getLogger(CamelSubscriber.class);
+
+/**
+ * Unbounded as per rule #17. No need to refill.*/";
+			CommonTokenStream tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input)));
+			var tree = analyzer.FindLongestTree(0, tokens, false, true);
+			tree.SetInput(input, tokens);
+			Assert.True(tree.IsEndingFixed, "Expect to insert } at the end.");
+			Assert.False(string.IsNullOrEmpty(tree.FixDescription));
+		}
 
 		[Theory]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff")]
