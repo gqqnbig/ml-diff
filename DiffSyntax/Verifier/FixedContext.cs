@@ -13,7 +13,7 @@ namespace DiffSyntax
 
 		//public bool IsFixedByParser { get; set; }
 
-		public bool IsFixedByLexer => IsBeginningFixed || IsEndingFixed;
+		public bool IsFixed => IsBeginningFixed || IsEndingFixed;
 
 		/// <summary>
 		/// The number of characters inserted to the beginning of the underlying stream.
@@ -39,7 +39,7 @@ namespace DiffSyntax
 			if (Context == null)
 				return false;
 
-			if (IsBeginningFixed && other.IsFixedByLexer == false)
+			if (IsBeginningFixed && other.IsFixed == false)
 			{
 				if (Context.Start.Type == IntStreamConstants.EOF)
 					return true;
@@ -61,7 +61,9 @@ namespace DiffSyntax
 				return false;
 			}
 
-			if (IsEndingFixed && other.IsFixedByLexer == false)
+
+
+			if (IsEndingFixed && other.IsFixed == false)
 			{
 				if (Context.Start.Type == IntStreamConstants.EOF)
 					return true;
@@ -82,9 +84,11 @@ namespace DiffSyntax
 				return false;
 			}
 
-			throw new NotSupportedException();
+			//I have to insert token, but the other can return context in full.
+			if (IsFixed && other.Context != null && other.Context.exception == null)
+				return false;
 
-			return false;
+			throw new NotSupportedException();
 		}
 
 	}
