@@ -62,24 +62,24 @@ public class TidyMarkupDataFormat extends ServiceSupport implements DataFormat, 
 			Assert.Equal(1, identifiers.Count);
 		}
 
-		[Fact]
+		[Fact(DisplayName ="Test snippet with 2 block comments with the second one incomplete")]
 		public void TestCompleteCommentAndIncompleteComment()
 		{
 			string input = @"
-	   /**
-		* View holder object for the GridView
-		*/
+/**
+* View holder object for the GridView
+*/
 class PodcastViewHolder {
 
-    /**
-     * ImageView holding the Podcast image
+/**
+* ImageView holding the Podcast image
 ";
 
 			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
 			Assert.Equal(1, identifiers.Count);
 		}
 
-		[Fact]
+		[Fact(DisplayName = "Test snippet with 2 block comments with the first one incomplete")]
 		public void TestCompleteCommentAndIncompleteComment2()
 		{
 			string javaSnippet = @"
