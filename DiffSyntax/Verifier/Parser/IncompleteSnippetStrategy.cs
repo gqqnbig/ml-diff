@@ -3,9 +3,26 @@ using Antlr4.Runtime.Misc;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using DiffSyntax.Antlr;
+using Microsoft.Extensions.Logging;
 
 namespace DiffSyntax.Parser
 {
+	public class BailJavaLexer : JavaLexer
+	{
+
+		private static readonly ILogger logger = ApplicationLogging.loggerFactory.CreateLogger(nameof(BailJavaLexer));
+
+		public BailJavaLexer(ICharStream input) : base(input) { }
+
+		public override void Recover(LexerNoViableAltException e)
+		{
+			logger.LogWarning(e.Message);
+			throw e;
+		}
+	}
+
+
 	public class IncompleteSnippetStrategy : DefaultErrorStrategy
 	{
 		int firstValidToken = -1;

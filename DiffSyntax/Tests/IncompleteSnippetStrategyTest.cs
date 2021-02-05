@@ -14,7 +14,7 @@ namespace DiffSyntax.Tests
 		public void TestEndingFix()
 		{
 
-			JavaParser parser = new JavaParser(new CommonTokenStream(new JavaLexer(CharStreams.fromString("int a=1"))));
+			JavaParser parser = new JavaParser(new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("int a=1"))));
 			parser.RemoveErrorListeners();
 			FixedContext context = new FixedContext();
 			var errorStrategy = new IncompleteSnippetStrategy(context, true, true);
@@ -29,7 +29,7 @@ namespace DiffSyntax.Tests
 		public void TestBeginningFix()
 		{
 
-			JavaParser parser = new JavaParser(new CommonTokenStream(new JavaLexer(CharStreams.fromString("C1 extends C2 {}"))));
+			JavaParser parser = new JavaParser(new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("C1 extends C2 {}"))));
 			parser.RemoveErrorListeners();
 			FixedContext context = new FixedContext();
 			var errorStrategy = new IncompleteSnippetStrategy(context, true, true);

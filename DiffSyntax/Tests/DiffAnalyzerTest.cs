@@ -5,6 +5,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 using System.Linq;
+using DiffSyntax.Parser;
 
 namespace DiffSyntax.Tests
 {
@@ -106,7 +107,7 @@ private class FailedDownloadHandler implements Runnable {
     private DownloadRequest request;
     private DownloadStatus status;";
 
-			CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
+			CommonTokenStream tokens2 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
 			new DiffAnalyzer(logger).FindLongestTree(0, tokens2, false, false);
 
 
@@ -127,12 +128,40 @@ public interface TimeClient {
 		}
 
 
+		[Fact]
+		public void TestUnrecognizedLexerCharacters()
+		{
+			string input = @"
+ *
+ * Callers from UI should use {@link #runImmediate(Context)}, as it will guarantee
+ * the refresh be run immediately.
+ * @param context
+ */
+public static void runOnce(Context context) {
+    Log.d(TAG, ""Run auto update once, as soon as OS allows."");";
+
+
+			input = @"
+# */
+int a=1;
+/* #";
+
+			//CommonTokenStream tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input)));
+			//tokens.Fill();
+
+			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
+
+
+		}
+
+
 		[Theory]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff")]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\118d9103c124700d82f5f50e2b8a7b2b8a5cb4ad.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\000e09a80874cc6b3ee748504611d4bb45be3483.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\041bda6ecc320200f85b9597e8826940f53fd6bd.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\44883d06903d1cf6d034917e123ce45f21f504d4.diff")]
+		[InlineData(@"D:\renaming\data\real\AntennaPod\1b24b0943284d49789754d35d3835be6ded7755d.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);

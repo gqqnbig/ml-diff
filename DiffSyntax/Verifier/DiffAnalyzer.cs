@@ -66,12 +66,12 @@ namespace DiffSyntax
 
 			if (uniqueInBefore.Count == 1 && uniqueInAfter.Count == 1)
 			{
-				Console.WriteLine($"This diff only changes one identifier, from {uniqueInBefore[0].IdentifierDeclaration.Name} to {uniqueInAfter[0].IdentifierDeclaration.Name}.");
+				logger.LogInformation($"This diff only changes one identifier, from {uniqueInBefore[0].IdentifierDeclaration.Name} to {uniqueInAfter[0].IdentifierDeclaration.Name}.");
 				return true;
 			}
 			else if (uniqueInBefore.Count == 0 && uniqueInAfter.Count == 0)
 			{
-				Console.WriteLine("No identifier changes.");
+				logger.LogInformation("No identifier changes.");
 				return false;
 			}
 			else
@@ -81,7 +81,7 @@ namespace DiffSyntax
 				string a = string.Join(", ", from i in uniqueInAfter
 											 select i.IdentifierDeclaration.Name);
 
-				Console.WriteLine($"There are multiple identifier changes in this diff.\nBefore: {b}\nAfter: {a}.");
+				logger.LogInformation($"There are multiple identifier changes in this diff.\nBefore: {b}\nAfter: {a}.");
 				return false;
 			}
 		}
@@ -126,23 +126,75 @@ namespace DiffSyntax
 				yield return diffLines.GetRange(snipetStart, diffLines.Count - snipetStart);
 		}
 
+		private bool IsLexerCorrect(CommonTokenStream tokens)
+		{
+			try
+			{
+				tokens.Fill();
+				return true;
+			}
+			catch (LexerNoViableAltException e)
+			{
+				return false;
+			}
+		}
+
+
 		public List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet)
 		{
-			List<IdentifierDeclaration> identifierDeclarations = new List<IdentifierDeclaration>();
-
-			CommonTokenStream tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet)));
-
-
 			bool isBeginningFixTried = false;
 			bool isEndingFixTried = false;
+			CommonTokenStream tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet)));
 
+
+
+			if (IsLexerCorrect(tokens) == false)
+			{
+				tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
+
+				if (IsLexerCorrect(tokens))
+				{
+					isBeginningFixTried = true;
+					javaSnippet = "/*" + javaSnippet;
+				}
+				else
+				{
+					tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet + "*/")));
+					if (IsLexerCorrect(tokens))
+					{
+						isEndingFixTried = true;
+						javaSnippet = javaSnippet + "*/";
+					}
+					else
+					{
+						tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet + "*/")));
+
+						if (IsLexerCorrect(tokens))
+						{
+							isBeginningFixTried = true;
+							isEndingFixTried = true;
+							javaSnippet = "/*" + javaSnippet + "*/";
+						}
+						else
+							throw new FormatException("The input is not valid Java. Lexer throws error.");
+					}
+				}
+			}
+
+			return FindDeclaredIdentifiersFromSnippet(javaSnippet, tokens, isBeginningFixTried, isEndingFixTried);
+		}
+
+		private List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet, CommonTokenStream tokens, bool isBeginningFixTried, bool isEndingFixTried)
+		{
+
+			List<IdentifierDeclaration> identifierDeclarations = new List<IdentifierDeclaration>();
 			int startToken = Helper.FindNextToken(tokens).TokenIndex;
-			for (; ; )
+			for (;;)
 			{
 				IToken startPosition = tokens.LT(1);
 				if (startPosition.Type == IntStreamConstants.EOF)
 					break;
-				if (new[] { ",", ")", "}" }.Contains(startPosition.Text))
+				if (new[] {",", ")", "}"}.Contains(startPosition.Text))
 				{
 					startToken = Helper.FindNextToken(tokens, startToken).TokenIndex;
 					continue;
@@ -159,7 +211,7 @@ namespace DiffSyntax
 				if (isBeginningFixTried == false && javaSnippet.Contains("*/"))
 				{
 					isBeginningFixTried = true;
-					CommonTokenStream tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*" + javaSnippet)));
+					CommonTokenStream tokens2 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
 					alternativeTree = FindLongestTree(0, tokens2, false, false);
 					alternativeTree.CharIndexOffset = 2;
 					alternativeTree.FixDescription = "Token \"/*\" is missing at the beginning.";
@@ -169,7 +221,7 @@ namespace DiffSyntax
 				}
 				else if (isEndingFixTried == false && javaSnippet.Contains("/*"))
 				{
-					CommonTokenStream tokens3 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(javaSnippet + "*/")));
+					CommonTokenStream tokens3 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet + "*/")));
 					alternativeTree = FindLongestTree(startToken, tokens3, false, false);
 					alternativeTree.FixDescription = "Token \"*/\" is missing at the end.";
 					alternativeTree.IsEndingFixed = true;

@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime;
 using DiffSyntax.Antlr;
+using DiffSyntax.Parser;
 using Xunit;
 
 namespace DiffSyntax.Tests
@@ -14,7 +15,7 @@ namespace DiffSyntax.Tests
 /* hello world */
 int a = 1;";
 
-			var tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(input)));
+			var tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input)));
 			tokens.Fill();
 			tokens.Seek(0);
 			var t = tokens.LT(1);
@@ -25,7 +26,7 @@ int a = 1;";
 		[Fact]
 		public void TestConsumeIncompleteComment()
 		{
-			var lexer = new JavaLexer(CharStreams.fromString("/*"));
+			var lexer = new BailJavaLexer(CharStreams.fromString("/*"));
 			var tokens = new CommonTokenStream(lexer);
 			tokens.Fill();
 			Assert.True(tokens.Size > 0);
@@ -34,13 +35,13 @@ int a = 1;";
 		[Fact]
 		public void TestStopNull()
 		{
-			JavaParser parser = new JavaParser(new CommonTokenStream(new JavaLexer(CharStreams.fromString("/**/"))));
+			JavaParser parser = new JavaParser(new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/**/"))));
 			var tree = parser.compilationUnit();
 			Assert.Equal(IntStreamConstants.EOF, tree.Start.Type);
 			Assert.Null(tree.Stop);
 
 
-			var tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString("{ /**/")));
+			var tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("{ /**/")));
 			tokens.Seek(1);
 			parser = new JavaParser(tokens);
 			tree = parser.compilationUnit();
@@ -52,7 +53,7 @@ int a = 1;";
 		[Fact]
 		public void TestUnableToDetermineStop()
 		{
-			JavaParser parser = new JavaParser(new CommonTokenStream(new JavaLexer(CharStreams.fromString("/**/"))));
+			JavaParser parser = new JavaParser(new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/**/"))));
 			var tree = parser.compilationUnit();
 			Assert.Equal(IntStreamConstants.EOF, tree.Start.Type);
 			Assert.Null(tree.Stop);

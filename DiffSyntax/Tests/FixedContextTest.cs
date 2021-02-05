@@ -4,6 +4,7 @@ using System.Text;
 using Antlr4.Runtime;
 using DiffSyntax;
 using DiffSyntax.Antlr;
+using DiffSyntax.Parser;
 using Xunit;
 
 namespace DiffSyntax.Tests
@@ -15,14 +16,14 @@ namespace DiffSyntax.Tests
 		{
 			string input = "import a;/*";
 
-			var tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(input)));
+			var tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input)));
 			JavaParser parser = new JavaParser(tokens);
 
 			var t1 = new FixedContext { Context = parser.compilationUnit() };
 			t1.SetInput(input, tokens);
 
 
-			var tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString(input + "*/")));
+			var tokens2 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input + "*/")));
 			JavaParser parser2 = new JavaParser(tokens2);
 
 			var t2 = new FixedContext { Context = parser2.compilationUnit() };
@@ -38,14 +39,14 @@ namespace DiffSyntax.Tests
 		{
 			string input = "Redefine this target. */ int a =1;";
 
-			var tokens = new CommonTokenStream(new JavaLexer(CharStreams.fromString(input)));
+			var tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(input)));
 			JavaParser parser = new JavaParser(tokens);
 
 			var t1 = new FixedContext { Context = parser.compilationUnit() };
 			t1.SetInput(input, tokens);
 
 
-			var tokens2 = new CommonTokenStream(new JavaLexer(CharStreams.fromString("/*"+input)));
+			var tokens2 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*"+input)));
 			JavaParser parser2 = new JavaParser(tokens2);
 
 			var t2 = new FixedContext { Context = parser2.compilationUnit() };
