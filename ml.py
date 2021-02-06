@@ -15,6 +15,7 @@ try:
 except:
 	pass
 
+MAX_FILE_SIZE_IN_KB = 10
 num_hiddens = 256
 vocab_size = 126 - 32 + 1
 lr = 1e2
@@ -53,14 +54,16 @@ def cutAndPadLine(line, length):
 
 
 def getDiffFiles(folder):
-	for diff in os.listdir(folder):
-		if diff.startswith('.'):
+	for diff in os.scandir(folder):
+
+		if diff.name.startswith('.'):
 			continue
-		fullPath = os.path.join(folder, diff)
-		if os.path.isdir(fullPath):
-			yield from getDiffFiles(fullPath)
-		if diff.endswith('.diff'):
-			yield fullPath
+
+		# fullPath = os.path.join(folder, diff)
+		if diff.is_dir():
+			yield from getDiffFiles(diff.path)
+		if diff.name.endswith('.diff') and diff.stat().st_size <= MAX_FILE_SIZE_IN_KB * 1024:
+			yield diff.path
 
 
 def loadDataset(folder):
@@ -105,7 +108,8 @@ def loadDataset(folder):
 	# print(f"convert_as_list: {timeit.Timer(lambda: tf.convert_to_tensor(data, tf.int32)).timeit(1)} s")
 	# exit()
 
-	# data = np.asarray(data, np.int32)
+	print('data loaded. Converting to tensor...')
+	data = np.asarray(data, np.int32)
 	data = tf.convert_to_tensor(data, tf.int32)
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
