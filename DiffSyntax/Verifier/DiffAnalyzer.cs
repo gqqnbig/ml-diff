@@ -378,7 +378,10 @@ namespace DiffSyntax
 					else
 					{
 						logger.LogDebug("{0} produced a full match, stopped at {1}.", ruleName, c.Context.SourceInterval.b);
-						if (longestTree?.Context == null || c.Context.SourceInterval.b > longestTree.Context.SourceInterval.b)
+						if (longestTree?.Context == null ||
+							c.Context.SourceInterval.b > longestTree.Context.SourceInterval.b ||
+							//If SourceInterval.b is the same, check if this rule doesn't have exception
+							c.Context.SourceInterval.b == longestTree.Context.SourceInterval.b && (c.Context.exception == null || c.IsFixed == false) && (longestTree.Context.exception != null || longestTree.IsFixed))
 						{
 							longestTree = c;
 						}
