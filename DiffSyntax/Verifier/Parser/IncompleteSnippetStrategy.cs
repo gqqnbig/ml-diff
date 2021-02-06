@@ -24,6 +24,7 @@ namespace DiffSyntax.Parser
 			//not useful.
 			//logger.LogWarning(e.Message);
 			throw e;
+			//throw new ParseCanceledException(e);
 		}
 
 	}

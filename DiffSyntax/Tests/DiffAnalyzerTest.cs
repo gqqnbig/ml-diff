@@ -112,6 +112,8 @@ private static final Logger LOG = LoggerFactory.getLogger(CamelSubscriber.class)
 		[InlineData(@"D:\renaming\data\real\dbeaver\f491904b794212ab8d598c06cb8b44dc04ffb5da.diff")]
 		[InlineData(@"D:\renaming\data\real\dbeaver\f100c38f0ca6448d52ab82a93676648eb781f46b.diff")]
 		[InlineData(@"D:\renaming\data\real\jenkins\304de19e73886c49593c654d14c13448ea97816f.diff")]
+		[InlineData(@"D:\renaming\data\real\libgdx\59e00cb09a41fe2b056bff24a82a40ebaa46dc1c.diff")]
+		//[InlineData(@"D:\renaming\data\real\libgdx\59e00cb09a41fe2b056bff24a82a40ebaa46dc1c.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);

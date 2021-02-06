@@ -16,13 +16,6 @@ namespace DiffSyntax
 	{
 		private readonly ILogger logger;
 
-
-		/// <summary>
-		/// Allow to skip up to this number of tokens before starting match. 
-		/// </summary>
-		private const int SkipInlineTokens = 0;
-		//int maxAllowedUnmatchedLines = 2;
-
 		public DiffAnalyzer(ILogger logger = null)
 		{
 			this.logger = logger ?? ApplicationLogging.loggerFactory.CreateLogger(nameof(DiffAnalyzer));
@@ -218,20 +211,26 @@ namespace DiffSyntax
 				{
 					isBeginningFixTried = true;
 					CommonTokenStream tokens2 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
-					alternativeTree = FindLongestTree(0, tokens2, false, false);
-					alternativeTree.CharIndexOffset = 2;
-					alternativeTree.FixDescription = "Token \"/*\" is missing at the beginning.";
-					Debug.Assert(alternativeTree.IsBeginningFixed == false, "FindLongestTree is not allowed to fix beginning.");
-					alternativeTree.IsBeginningFixed = true;
-					alternativeTree.SetInput("/*" + javaSnippet, tokens2);
+					if (IsLexerCorrect(tokens2))
+					{
+						alternativeTree = FindLongestTree(0, tokens2, false, false);
+						alternativeTree.CharIndexOffset = 2;
+						alternativeTree.FixDescription = "Token \"/*\" is missing at the beginning.";
+						Debug.Assert(alternativeTree.IsBeginningFixed == false, "FindLongestTree is not allowed to fix beginning.");
+						alternativeTree.IsBeginningFixed = true;
+						alternativeTree.SetInput("/*" + javaSnippet, tokens2);
+					}
 				}
 				else if (isEndingFixTried == false && javaSnippet.Contains("/*"))
 				{
 					CommonTokenStream tokens3 = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet + "*/")));
-					alternativeTree = FindLongestTree(startToken, tokens3, false, false);
-					alternativeTree.FixDescription = "Token \"*/\" is missing at the end.";
-					alternativeTree.IsEndingFixed = true;
-					alternativeTree.SetInput(javaSnippet + "*/", tokens3);
+					if (IsLexerCorrect(tokens3))
+					{
+						alternativeTree = FindLongestTree(startToken, tokens3, false, false);
+						alternativeTree.FixDescription = "Token \"*/\" is missing at the end.";
+						alternativeTree.IsEndingFixed = true;
+						alternativeTree.SetInput(javaSnippet + "*/", tokens3);
+					}
 				}
 
 				if (alternativeTree != null && alternativeTree.IsBetterThan(tree))
@@ -337,9 +336,16 @@ namespace DiffSyntax
 
 
 		[return: NotNull]
-		public FixedContext FindLongestTree(int startIndex, ITokenStream tokens, bool canFixBeginning, bool canFixEnding)
+		public FixedContext FindLongestTree(int startIndex, CommonTokenStream tokens, bool canFixBeginning, bool canFixEnding)
 		{
+#if DEBUG
+			//tokens must be valid. It cannot throw exceptions.
+			tokens.Fill();
+#endif
+
+
 			FixedContext longestTree = null;
+
 
 			foreach (string ruleName in JavaParser.ruleNames)
 			{
@@ -392,6 +398,7 @@ namespace DiffSyntax
 					if (e.InnerException is ParseCanceledException)
 					{
 						RecognitionException recognitionException = (RecognitionException)e.InnerException.InnerException;
+
 						ParserRuleContext context = (ParserRuleContext)recognitionException.Context;
 
 						if (recognitionException.OffendingToken.TokenIndex == tokens.Size - 1 && tokens.LA(1) == IntStreamConstants.EOF)
