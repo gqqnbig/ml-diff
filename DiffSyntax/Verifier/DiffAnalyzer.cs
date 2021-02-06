@@ -42,6 +42,7 @@ namespace DiffSyntax
 				string before = t.Item1;
 				string after = t.Item2;
 
+				logger.LogInformation($"Snippet {snippetIndex}");
 
 				try
 				{
@@ -202,7 +203,7 @@ namespace DiffSyntax
 
 				//The order of the parameters, not their placeholder names, determines which parameters are used...
 				//https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0#log-message-template
-				logger.LogInformation("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
+				logger.LogDebug("Start at token {0} (t:{1}, l:{2}, c:{3})", startPosition.Text, startToken, startPosition.Line, startPosition.Column);
 
 
 				var tree = FindLongestTree(startToken, tokens, isBeginningFixTried, isEndingFixTried);
@@ -305,9 +306,9 @@ namespace DiffSyntax
 				bool isFullLineMatch = t.Type == IntStreamConstants.EOF || t.Line > endLine;
 
 				if (isFullLineMatch)
-					logger.LogInformation("{0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
+					logger.LogDebug("{0} matches line {1} in full.", JavaParser.ruleNames[tree.RuleIndex], endLine);
 				else
-					logger.LogInformation($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
+					logger.LogDebug($" {JavaParser.ruleNames[tree.RuleIndex]} match ends at the middle of line {endLine}.");
 
 				bool isTreeUseful = false;
 				if (tree.Start.Line < tree.Stop.Line || isFullLineMatch)
