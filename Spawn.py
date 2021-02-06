@@ -6,6 +6,14 @@ import subprocess
 
 import CreateLabel
 
+"""
+From a folder, you change a Java file and this script will create diff for you. 
+
+You specify `rawChangeCount` that each Java file needs to change such times. It's ok to quit early.
+
+After you finish changing a file, this script allows you to continue to change another file.
+"""
+
 
 def replaceWordAt(line, index, newWord):
 	assert line[index].isalnum() or line[index] == '_'
@@ -217,8 +225,9 @@ if __name__ == '__main__':
 	with open(vocabularyFile, 'r', encoding='utf-8') as f:
 		vocabulary = set(f.read().splitlines())
 
-	rawChangeCount = 10
-	# spawnFromTemplate(r'D:\renaming\data\generated\dd\LinkedList-1.diff', vocabulary, 10)
+	rawChangeCount = 1000
+	spawnFromTemplate(r"D:\renaming\data\generated\original\AllInOne7-19.diff", vocabulary, 10)
+	spawnFromTemplate(r"D:\renaming\data\generated\original\AllInOne7-26.diff", vocabulary, 10)
 
 	# for file in os.scandir(r'D:\renaming\data\generated\dd'):
 	# 	if file.name.count('-') == 1:
@@ -227,7 +236,7 @@ if __name__ == '__main__':
 	# 		except Exception as e:
 	# 			print(f'File {file.name} has error:\n' + str(e))
 	#
-	# exit()
+	exit()
 
 	outputDir = r'D:\renaming\data\generated\dd'
 
@@ -237,7 +246,7 @@ if __name__ == '__main__':
 
 		previousDiffs = []
 		print(f'\nOpen {file.name}.')
-		pass_ = 0
+		pass_ = 24
 		while pass_ < rawChangeCount:
 			print(f'You will need to modify {rawChangeCount - pass_} more times.')
 

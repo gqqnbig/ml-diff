@@ -1,8 +1,10 @@
-import timeit
+import os
+
+# disable tensorflow info log
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import tensorflow as tf
 
-import os
 import sys
 import numpy as np
 
@@ -95,16 +97,18 @@ def loadDataset(folder):
 	assert conversionDict[0] == 0
 	data = [[conversionDict[c] for c in example] for example in data]
 
+	labels = [getLabel(f) for f in inputFiles]
+	# import timeit
 	# print(f"convert_as_int32 numpy_array: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data, dtype=np.int32), tf.int32)).timeit(1)} s")
-	# print(f"convert_as_numpy_array: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data), tf.int32)).timeit(1)} s")
+	# print(f"convert_as_numpy_array (fastest!): {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data), tf.int32)).timeit(1)} s")
 	# print(f"convert_as_numpy_array no hint: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data))).timeit(1)} s")
 	# print(f"convert_as_list: {timeit.Timer(lambda: tf.convert_to_tensor(data, tf.int32)).timeit(1)} s")
+	# exit()
 
-	data = np.asarray(data, np.int32)
+	# data = np.asarray(data, np.int32)
 	data = tf.convert_to_tensor(data, tf.int32)
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
-	labels = [getLabel(f) for f in inputFiles]
 	dataset = tf.data.Dataset.from_tensor_slices((data, labels))
 	# dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
@@ -137,19 +141,25 @@ if __name__ == '__main__':
 	train_data = train_data.batch(batch_size)
 	test_data = test_data.batch(batch_size)
 
-	model = tf.keras.Sequential()
-	model.add(tf.keras.layers.Flatten())
-	model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
-	model.add(tf.keras.layers.Dense(100, activation='relu'))
-	model.add(tf.keras.layers.Dense(10, activation='relu'))
-	model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
+	savedModel = 'model.save'
+	if os.path.exists(savedModel):
+		model = tf.keras.models.load_model(savedModel)
+	else:
+		model = tf.keras.Sequential()
+		model.add(tf.keras.layers.Flatten())
+		model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
+		model.add(tf.keras.layers.Dense(100, activation='relu'))
+		model.add(tf.keras.layers.Dense(10, activation='relu'))
+		model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
 
-	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
-	# model.summary()
+		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
+		# model.summary()
 
-	num_epochs = 50
-	model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
+		num_epochs = 50
+		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
+		model.save('model.save')
 
+	# dataset.map(lambda x,y:x)
 	test_example = list(dataset.skip(5).take(1))[0]
 	# predict, as the same as fit, must take batches. Therefore, we must add a new dimension to the extracted features.
 	prediction = model.predict(tf.expand_dims(test_example[0], 0))[0]
