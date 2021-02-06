@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Diagnostics;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
@@ -66,6 +67,15 @@ namespace DiffSyntax
 
 			string[] lines = File.ReadAllLines(Path.Join(baseFolder, repo + ".txt"));
 
+			int total = lines.Length;
+			int processed = 0;
+
+			var progressTimer = new System.Threading.Timer(_ =>
+			 {
+				 Console.WriteLine($"Progress {processed}/{total}.");
+			 });
+			progressTimer.Change(0, 1000);
+
 #if DEBUG
 			foreach (var line in lines)
 #else
@@ -108,10 +118,13 @@ namespace DiffSyntax
 						throw;
 					}
 				}
+
+				Interlocked.Increment(ref processed);
 			}
 #if !DEBUG
 			);
 #endif
+			progressTimer.Dispose();
 		}
 
 		private static void CheckExamples()
