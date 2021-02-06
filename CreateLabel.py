@@ -1,6 +1,35 @@
 import os
 import re
-from typing import List, Tuple, Optional
+
+
+# from typing import List, Tuple, Optional
+#
+# from Antlr import *
+#
+#
+# import JavaMiniParser
+#
+#
+# def testRenaming(filePath):
+# 	with open(filePath, 'r', encoding='utf-8') as f:
+# 		lines = f.readlines()
+#
+# 	addedLines = [l for l in lines if l.startswith('+')]
+# 	removedLines = [l for l in lines if l.startswith('-')]
+#
+# 	for key, pattern in JavaMiniParser.getDefinitionPatterns().items():
+# 		matchAdd = False
+# 		matchRemove = False
+# 		for line in addedLines:
+# 			m = re.match(pattern, line, re.IGNORECASE)
+# 			if m:
+# 				matchAdd = True
+# 				break
+# 		for line in removedLines:
+# 			m = re.match(pattern, line, re.IGNORECASE)
+# 			if m:
+# 				matchRemove = True
+# 				break
 
 
 def findDifferenceStart(str1, str2, start):
@@ -152,7 +181,7 @@ def rearrangeBalancedAddRemove(lines: list, file):
 	if isRearranged:
 		with open(file, 'w', encoding='utf-8', newline='\n') as f:
 			f.writelines(lines)
-		print(f'rearrange diff {file}')
+	# print(f'rearrange diff {file}')
 
 
 def getWord(content: str, index):
@@ -208,16 +237,9 @@ def getWord(content: str, index):
 # 	else:
 # 		return None
 
-
-if __name__ == '__main__':
-	createLabels(r'D:\renaming\data\real\AntennaPod\0499ef60ac7122dfad8c1579327c72eaca37cde9.diff')
-
-	exit()
-	folder = r'D:\renaming\data\real\AntennaPod'
-	labelFile = r'D:\renaming\data\real\AntennaPod.txt'
-
+def createLabelForRepo(repo, labelFile):
 	with open(labelFile, 'w', encoding='utf-8') as labelFile:
-		for diff in os.scandir(folder):
+		for diff in os.scandir(repo):
 			if diff.is_dir() or not diff.name.endswith('.diff'):
 				continue
 
@@ -232,17 +254,53 @@ if __name__ == '__main__':
 				if 0 < len(labels) <= 2:
 					labelFile.write('y')
 
-					print(diff.name + ": " + s)
+					# print(diff.name + ": " + s)
 					labelFile.write('|' + s)
 				elif len(labels) > 2:
 					labelFile.write('skip')
 
-					print(diff.name + ": " + s)
+					# print(diff.name + ": " + s)
 					labelFile.write('|' + s)
 				else:
 					labelFile.write('n')
 
 				labelFile.write('\n')
+
+
+if __name__ == '__main__':
+	createLabels(r'D:\renaming\data\real\camel\092c7053e4b47a31058b12822456502e355fcbd2.diff')
+
+
+	repos = ["camel",
+			 "camunda-bpm-platform",
+			 "dbeaver",
+			 "EhViewer",
+			 "Geyser",
+			 "iceberg",
+			 "Java",
+			 "java-design-patterns",
+			 "jenkins",
+			 "keycloak",
+			 "libgdx",
+			 "Mindustry",
+			 # "NewPipe",
+			 "openapi-generator",
+			 "quarkus",
+			 "Signal-Android",
+			 "spring-petclinic",
+			 "strimzi-kafka-operator",
+			 "testcontainers-java",
+			 "tutorials",
+			 "wiremock",
+			 ]
+
+	for repo in repos:
+		print('open ' + repo)
+		createLabelForRepo(r'D:\renaming\data\real\\' + repo, rf'D:\renaming\data\real\{repo}.txt')
+# createLabels(r'D:\renaming\data\real\AntennaPod\0499ef60ac7122dfad8c1579327c72eaca37cde9.diff')
+#
+# exit()
+
 # try:
 # 	result = isIdentifierRenaming(diff.path)
 # 	if result is not None:

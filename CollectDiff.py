@@ -34,6 +34,7 @@ def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 	# you want to work with
 	repo = Repo(repoPath)
 
+	newLineEofCount = 0
 	max_count = None
 	# first_parent=False because repositories often use pull-request pattern that the first parent often aggregates many changes.
 	for commit in repo.iter_commits(branch, max_count=max_count, first_parent=False):
@@ -66,6 +67,10 @@ def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 		# 	print(e)
 
 		if len(content) > 0:
+			if "\\ No newline at end of file" in content:
+				newLineEofCount += 1
+				continue
+
 			# if '\r\n' in content:
 			content = content.replace('\r\n', '\n').replace('\r', '\n')
 			# raise Exception('Currently, only Linux line ending (\\n) is supported.')
@@ -74,6 +79,8 @@ def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 			diffFileName = f'{commit.hexsha}.diff'
 			with open(os.path.join(diffFolder, diffFileName), 'w', encoding='utf-8', newline='\n') as f:
 				f.write(content)
+
+	print(f'Ignore {newLineEofCount} files because of newline at EOF changes.')
 
 
 # except Exception as e:
@@ -100,7 +107,7 @@ if __name__ == '__main__':
 		# "openapi-generator",
 		# "quarkus",
 		# "Signal-Android",
-		("spring-petclinic",'main'),
+		("spring-petclinic", 'main'),
 		"strimzi-kafka-operator",
 		"testcontainers-java",
 		"tutorials",
