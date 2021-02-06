@@ -101,6 +101,18 @@ private static final Logger LOG = LoggerFactory.getLogger(CamelSubscriber.class)
 			Assert.False(string.IsNullOrEmpty(tree.FixDescription));
 		}
 
+		[Fact]
+		public void TestMissingIdentifier()
+		{
+			string input = @"
+public class BenchmarkManualTest
+{
+   public void";
+			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
+			Assert.Collection(identifiers, _ => { });
+
+		}
+
 		[Theory]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\83a6d70387e8df95e04f198ef99f992aef674413.diff")]
 		[InlineData(@"D:\renaming\data\generated\dataset\AntennaPod\no\118d9103c124700d82f5f50e2b8a7b2b8a5cb4ad.diff")]

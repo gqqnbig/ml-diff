@@ -12,9 +12,8 @@ namespace DiffSyntax
 		public List<IdentifierDeclaration> DeclaredIdentifiers { get; private set; } = new List<IdentifierDeclaration>();
 
 
-		private void VisitDeclaredIdentifier(ITerminalNode identifier, int ruleIndex)
+		private void VisitDeclaredIdentifier([NotNull] ITerminalNode identifier, int ruleIndex)
 		{
-
 			DeclaredIdentifiers.Add(new IdentifierDeclaration(identifier.GetText(), ruleIndex, identifier.SourceInterval.a));
 		}
 
@@ -71,8 +70,10 @@ namespace DiffSyntax
 
 		public override object VisitMethodDeclaration([NotNull] MethodDeclarationContext context)
 		{
-			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
-			Visit(context.formalParameters());
+			if (context.IDENTIFIER() != null)
+				VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
+			if (context.formalParameters() != null)
+				Visit(context.formalParameters());
 			if (context.methodBody() != null)
 				Visit(context.methodBody());
 			return null;
