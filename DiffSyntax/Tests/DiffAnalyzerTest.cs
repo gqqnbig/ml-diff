@@ -19,7 +19,7 @@ namespace DiffSyntax.Tests
 				builder.AddDebug();
 				builder.SetMinimumLevel(LogLevel.Debug);
 #else
-					builder.SetMinimumLevel(LogLevel.Warning);
+				builder.SetMinimumLevel(LogLevel.Warning);
 #endif
 				// Add other loggers, e.g.: AddConsole, AddDebug, etc.
 			}).CreateLogger("DiffAnalyzer");
@@ -45,7 +45,22 @@ public interface TimeClient {
     }
 }";
 			Assert.Throws<System.NotSupportedException>(() => new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input));
+		}
 
+		[Fact]
+		public void TestSkipToNextLine()
+		{
+			string input = @"
+throws UnsupportedEncodingException, URISyntaxException {
+final DefaultMessage message = new DefaultMessage(camelContext);
+
+assertEquals("""", RestProducer.createQueryParameters(""param={param?}"", message));
+}";
+			var identifiers = new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet(input);
+			//Assert.Equal(1, identifiers.Count);
+
+
+			Assert.Collection(identifiers, _ => { });
 		}
 
 
@@ -77,6 +92,7 @@ private static final Logger LOG = LoggerFactory.getLogger(CamelSubscriber.class)
 		[InlineData(@"D:\renaming\data\real\camel\041bda6ecc320200f85b9597e8826940f53fd6bd.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\44883d06903d1cf6d034917e123ce45f21f504d4.diff")]
 		[InlineData(@"D:\renaming\data\real\AntennaPod\1b24b0943284d49789754d35d3835be6ded7755d.diff")]
+		[InlineData(@"D:\renaming\data\real\camel\00eb3707a0806623a2af228924e26e1184581f00.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);

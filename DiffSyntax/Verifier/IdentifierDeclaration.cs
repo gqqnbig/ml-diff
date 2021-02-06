@@ -35,7 +35,7 @@ namespace DiffSyntax
 
 		public override string ToString()
 		{
-			return Name + " from Rule " + Rule;
+			return Name + " from Rule " + DiffSyntax.Antlr.JavaParser.ruleNames[Rule];
 		}
 	}
 }

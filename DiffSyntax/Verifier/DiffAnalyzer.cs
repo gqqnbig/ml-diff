@@ -16,6 +16,13 @@ namespace DiffSyntax
 	{
 		private readonly ILogger logger;
 
+
+		/// <summary>
+		/// Allow to skip up to this number of tokens before starting match. 
+		/// </summary>
+		private const int SkipInlineTokens = 0;
+		//int maxAllowedUnmatchedLines = 2;
+
 		public DiffAnalyzer(ILogger logger = null)
 		{
 			this.logger = logger ?? ApplicationLogging.loggerFactory.CreateLogger(nameof(DiffAnalyzer));
@@ -65,7 +72,7 @@ namespace DiffSyntax
 				}
 				catch (FormatException e)
 				{
-					throw new FormatException($"Error in parsing snippet {snippetIndex} of {diffPath}. {e.Message}", e);
+					logger.LogInformation($"Ignore snippet {snippetIndex} of {diffPath}. {e.Message} ");
 				}
 			}
 
@@ -151,21 +158,21 @@ namespace DiffSyntax
 
 			if (IsLexerCorrect(tokens))
 				return FindDeclaredIdentifiersFromSnippet(javaSnippet, tokens, false, false);
-			
+
 			tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet)));
 			if (IsLexerCorrect(tokens))
 			{
 				logger.LogInformation("Token \"/*\" is missing at the beginning.");
 				return FindDeclaredIdentifiersFromSnippet("/*" + javaSnippet, tokens, true, false);
 			}
-			
+
 			tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString(javaSnippet + "*/")));
 			if (IsLexerCorrect(tokens))
 			{
 				logger.LogInformation("Token \"*/\" is missing at the end.");
 				return FindDeclaredIdentifiersFromSnippet(javaSnippet + "*/", tokens, false, true);
 			}
-			
+
 			tokens = new CommonTokenStream(new BailJavaLexer(CharStreams.fromString("/*" + javaSnippet + "*/")));
 
 			if (IsLexerCorrect(tokens))
@@ -173,26 +180,31 @@ namespace DiffSyntax
 				logger.LogInformation("Token \"/*\" is missing at the beginning. Token \"*/\" is missing at the end.");
 				return FindDeclaredIdentifiersFromSnippet("/*" + javaSnippet + "*/", tokens, true, true);
 			}
-			
+
 			throw new FormatException("The input is not valid Java. Lexer throws error.");
 		}
 
 		private List<IdentifierDeclaration> FindDeclaredIdentifiersFromSnippet(string javaSnippet, CommonTokenStream tokens, bool isBeginningFixTried, bool isEndingFixTried)
 		{
-			int maxAllowedUnmatch = 1;
+			//int maxAllowedInlineUnmatch = 1;
+			int maxAllowedUnmatchedLines = 2;
+			int? lastFailedLine = null;
 
 			List<IdentifierDeclaration> identifierDeclarations = new List<IdentifierDeclaration>();
 			int startToken = Helper.FindNextToken(tokens).TokenIndex;
-			for (;;)
+			for (; ; )
 			{
 				IToken startPosition = tokens.LT(1);
 				if (startPosition.Type == IntStreamConstants.EOF)
 					break;
-				if (new[] {",", ")", "}"}.Contains(startPosition.Text))
+				Debug.Assert(lastFailedLine == null || startPosition.Line >= lastFailedLine.Value);
+				if (new[] { ",", ")", "}" }.Contains(startPosition.Text) ||
+					lastFailedLine != null && startPosition.Line == lastFailedLine.Value)
 				{
 					startToken = Helper.FindNextToken(tokens, startToken).TokenIndex;
 					continue;
 				}
+				lastFailedLine = null;
 
 
 				//The order of the parameters, not their placeholder names, determines which parameters are used...
@@ -256,11 +268,19 @@ namespace DiffSyntax
 				}
 				else
 				{
-					--maxAllowedUnmatch;
-					if (maxAllowedUnmatch < 0)
-						throw new FormatException("Input is invalid. Is it all comments?");
+					//if (maxAllowedInlineUnmatch-- > 0)
+					//	logger.LogInformation($"Unable to match, advance to next token. maxAllowedUnmatch decreased to {maxAllowedInlineUnmatch}.");
+					//else 
+					//Do not try to match half way because the first token may be important and change the meaning of the remaining.
+					logger.LogInformation($"The first token \"{startPosition.Text}\" at line {startPosition.Line} cannot produce a match.");
+					if (maxAllowedUnmatchedLines-- > 0)
+					{
+						logger.LogInformation($"Advance to next line as I can skip {maxAllowedUnmatchedLines + 1} times.");
+						lastFailedLine = startPosition.Line;
+						//maxAllowedInlineUnmatch = 1;
+					}
 					else
-						logger.LogInformation($"Unable to match, advance to next token. maxAllowedUnmatch decreased to {maxAllowedUnmatch}.");
+						throw new FormatException("Input is invalid. Is it all comments?");
 				}
 			}
 			return identifierDeclarations;
