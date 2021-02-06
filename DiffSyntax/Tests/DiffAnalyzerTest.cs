@@ -44,6 +44,12 @@ namespace DiffSyntax.Tests
 			Assert.Equal(1, identifiers.Count);
 		}
 
+		[Fact]
+		public void TestAmbiguousInput()
+		{
+			new DiffAnalyzer(logger).FindDeclaredIdentifiersFromSnippet("a,b,");
+		}
+
 
 		[Fact]
 		public void TestNotSupportJava8()
@@ -104,6 +110,8 @@ private static final Logger LOG = LoggerFactory.getLogger(CamelSubscriber.class)
 		[InlineData(@"D:\renaming\data\real\AntennaPod\1b24b0943284d49789754d35d3835be6ded7755d.diff")]
 		[InlineData(@"D:\renaming\data\real\camel\00eb3707a0806623a2af228924e26e1184581f00.diff")]
 		[InlineData(@"D:\renaming\data\real\dbeaver\f491904b794212ab8d598c06cb8b44dc04ffb5da.diff")]
+		[InlineData(@"D:\renaming\data\real\dbeaver\f100c38f0ca6448d52ab82a93676648eb781f46b.diff")]
+		[InlineData(@"D:\renaming\data\real\jenkins\304de19e73886c49593c654d14c13448ea97816f.diff")]
 		public void TestCheckIdentifierChanges(string path)
 		{
 			new DiffAnalyzer(logger).CheckIdentifierChanges(path);

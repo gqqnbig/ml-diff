@@ -29,7 +29,8 @@ namespace DiffSyntax
 		public override object VisitClassDeclaration([NotNull] ClassDeclarationContext context)
 		{
 			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
-			Visit(context.classBody());
+			if (context.classBody() != null)
+				Visit(context.classBody());
 			return null;
 		}
 
@@ -101,7 +102,8 @@ namespace DiffSyntax
 
 		public override object VisitVariableDeclaratorId([NotNull] VariableDeclaratorIdContext context)
 		{
-			VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
+			if (context.IDENTIFIER() != null)
+				VisitDeclaredIdentifier(context.IDENTIFIER(), context.RuleIndex);
 			return null;
 		}
 
