@@ -115,11 +115,15 @@ def loadDataset(folder):
 	data = tf.convert_to_tensor(data, tf.int32)
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
-	dataset = tf.data.Dataset.from_tensor_slices((data, labels))
+	dataset = tf.data.Dataset.from_tensor_slices((data, labels, inputFiles))
 	# dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
 	print(f'There are {len(list(filter(lambda d: d[1] == 1, dataset)))} yes examples, and {len(list(filter(lambda d: d[1] == 0, dataset)))} no examples.')
 	return dataset
+
+
+def getColumn(ds: tf.data.Dataset, index):
+	return ds.map(lambda *d: d[index])
 
 
 if __name__ == '__main__':
@@ -136,16 +140,15 @@ if __name__ == '__main__':
 
 	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.')
 
-	dataset = dataset.map(lambda x, y: (tf.one_hot(x, maxEncoding), y))
-
 	dataset = dataset.shuffle(length)
 	train_length = int(length / 5 * 4)
-	train_data = dataset.take(train_length)
-	test_data = dataset.skip(train_length)
+
+	# train data don't need file path
+	train_data = dataset.take(train_length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y))
+	test_data = dataset.skip(train_length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath))
 	print(f"After shuffling the examples, let's use {tf.data.experimental.cardinality(train_data).numpy()} examples for training, {tf.data.experimental.cardinality(test_data).numpy()} for testing.")
 
 	train_data = train_data.batch(batch_size)
-	test_data = test_data.batch(batch_size)
 
 	savedModel = 'model.save'
 	if os.path.exists(savedModel):
@@ -165,9 +168,14 @@ if __name__ == '__main__':
 		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
 		model.save('model.save')
 
-	# dataset.map(lambda x,y:x)
-	test_example = list(dataset.skip(5).take(1))[0]
-	# predict, as the same as fit, must take batches. Therefore, we must add a new dimension to the extracted features.
-	prediction = model.predict(tf.expand_dims(test_example[0], 0))[0]
-	prediction = tf.where(prediction > 0.5, tf.ones_like(prediction, tf.int32), tf.zeros_like(prediction, tf.int32)).numpy()
-	print(f'prediction={prediction}, actual={test_example[1]}')
+	predictions = tf.squeeze(model.predict(getColumn(test_data, 0)))
+
+	predictions = tf.where(predictions > 0.5, tf.ones_like(predictions, tf.int32), tf.zeros_like(predictions, tf.int32)).numpy()
+
+	for prediction, actual, path in zip(predictions, getColumn(test_data, 1), getColumn(test_data, 2)):
+		actual = actual.numpy()
+		path = path.numpy()
+		if prediction == actual:
+			pass
+		else:
+			print(f'{path.decode()}: actual={actual}, prediction={prediction}')
