@@ -126,8 +126,14 @@ def getColumn(ds: tf.data.Dataset, index):
 	return ds.map(lambda *d: d[index])
 
 
+usage = f'{os.path.basename(sys.argv[0])} dataset-folder'
+
 if __name__ == '__main__':
-	dataset = loadDataset(r'D:\renaming\data\generated\dataset')
+	if len(sys.argv) <= 1:
+		print('You have to specify dataset folder.\n\n' + usage, file=sys.stderr)
+		exit(1)
+
+	dataset = loadDataset(sys.argv[1])
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
 		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.', flush=True)
