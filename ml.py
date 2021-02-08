@@ -172,7 +172,7 @@ if __name__ == '__main__':
 		# model.summary()
 
 		num_epochs = 50
-		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
+		model.fit(train_data, validation_data=test_data.map(lambda x, y, filePath: (x, y)), epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
 		model.save('model.save')
 
 	predictions = tf.squeeze(model.predict(getColumn(test_data, 0)))
