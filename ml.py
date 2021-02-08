@@ -152,6 +152,7 @@ if __name__ == '__main__':
 
 	savedModel = 'model.save'
 	if os.path.exists(savedModel):
+		print('Model loaded')
 		model = tf.keras.models.load_model(savedModel)
 	else:
 		model = tf.keras.Sequential()
