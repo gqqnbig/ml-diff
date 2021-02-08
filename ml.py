@@ -126,6 +126,43 @@ def getColumn(ds: tf.data.Dataset, index):
 	return ds.map(lambda *d: d[index])
 
 
+def trainModel(train_data, test_data):
+	"""
+
+	:param train_data: must be batched
+	:param test_data: must be batched
+	:return:
+	"""
+
+	assert len(train_data.element_spec) == len(test_data.element_spec), 'train_data and test_data must have the same components.'
+	for i in range(len(train_data.element_spec)):
+		assert train_data.element_spec[i].shape.ndims == test_data.element_spec[i].shape.ndims, \
+			f'The shape of component {i} does not match.\ntrain_data.element_spec[{i}].shape={train_data.element_spec[i].shape}\ntest_data.element_spec[{i}].shape={test_data.element_spec[i].shape}'
+	if len(train_data.element_spec) == 3:
+		assert train_data.element_spec[2].dtype != tf.string, 'If dataset has 3 components, the last one must be sample weights of type int32.'
+
+	savedModel = 'model.save'
+	if os.path.exists(savedModel):
+		print('Model loaded', flush=True)
+		model = tf.keras.models.load_model(savedModel)
+	else:
+		model = tf.keras.Sequential()
+		model.add(tf.keras.layers.Flatten())
+		model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
+		model.add(tf.keras.layers.Dense(100, activation='relu'))
+		model.add(tf.keras.layers.Dense(10, activation='relu'))
+		model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
+
+		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
+		# model.summary()
+
+		num_epochs = 50
+		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
+		model.save('model.save')
+
+	return model
+
+
 usage = f'{os.path.basename(sys.argv[0])} dataset-folder'
 
 if __name__ == '__main__':
@@ -146,34 +183,17 @@ if __name__ == '__main__':
 
 	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 
-	dataset = dataset.shuffle(length)
+	dataset = dataset.shuffle(length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath))
 	train_length = int(length / 5 * 4)
 
 	# train data don't need file path
-	train_data = dataset.take(train_length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y))
-	test_data = dataset.skip(train_length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath))
+	train_data = dataset.take(train_length)
+	test_data = dataset.skip(train_length)
 	print(f"After shuffling the examples, let's use {tf.data.experimental.cardinality(train_data).numpy()} examples for training, {tf.data.experimental.cardinality(test_data).numpy()} for testing.", flush=True)
 
-	train_data = train_data.batch(batch_size)
-
-	savedModel = 'model.save'
-	if os.path.exists(savedModel):
-		print('Model loaded', flush=True)
-		model = tf.keras.models.load_model(savedModel)
-	else:
-		model = tf.keras.Sequential()
-		model.add(tf.keras.layers.Flatten())
-		model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
-		model.add(tf.keras.layers.Dense(100, activation='relu'))
-		model.add(tf.keras.layers.Dense(10, activation='relu'))
-		model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
-
-		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
-		# model.summary()
-
-		num_epochs = 50
-		model.fit(train_data, validation_data=test_data.map(lambda x, y, filePath: (x, y)), epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
-		model.save('model.save')
+	a = train_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
+	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
+	model = trainModel(a, b)
 
 	predictions = tf.squeeze(model.predict(getColumn(test_data, 0)))
 
