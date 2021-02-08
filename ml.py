@@ -110,7 +110,7 @@ def loadDataset(folder):
 	# print(f"convert_as_list: {timeit.Timer(lambda: tf.convert_to_tensor(data, tf.int32)).timeit(1)} s")
 	# exit()
 
-	print('data loaded. Converting to tensor...')
+	print('data loaded. Converting to tensor...', flush=True)
 	data = np.asarray(data, np.int32)
 	data = tf.convert_to_tensor(data, tf.int32)
 	# assert data.shape[1] == featureSize
@@ -118,7 +118,7 @@ def loadDataset(folder):
 	dataset = tf.data.Dataset.from_tensor_slices((data, labels, inputFiles))
 	# dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
-	print(f'There are {len(list(filter(lambda d: d[1] == 1, dataset)))} yes examples, and {len(list(filter(lambda d: d[1] == 0, dataset)))} no examples.')
+	print(f'There are {len(list(filter(lambda d: d[1] == 1, dataset)))} yes examples, and {len(list(filter(lambda d: d[1] == 0, dataset)))} no examples.', flush=True)
 	return dataset
 
 
@@ -130,15 +130,15 @@ if __name__ == '__main__':
 	dataset = loadDataset(r'D:\renaming\data\generated\dataset')
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
-		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.')
+		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.', flush=True)
 
 	length = tf.data.experimental.cardinality(dataset).numpy()
-	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.")
+	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.", flush=True)
 
 	maxEncoding = max([d[0].numpy().max() for d in dataset])
-	print(f'Max encoding is {maxEncoding}.')
+	print(f'Max encoding is {maxEncoding}.', flush=True)
 
-	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.')
+	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 
 	dataset = dataset.shuffle(length)
 	train_length = int(length / 5 * 4)
@@ -146,13 +146,13 @@ if __name__ == '__main__':
 	# train data don't need file path
 	train_data = dataset.take(train_length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y))
 	test_data = dataset.skip(train_length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath))
-	print(f"After shuffling the examples, let's use {tf.data.experimental.cardinality(train_data).numpy()} examples for training, {tf.data.experimental.cardinality(test_data).numpy()} for testing.")
+	print(f"After shuffling the examples, let's use {tf.data.experimental.cardinality(train_data).numpy()} examples for training, {tf.data.experimental.cardinality(test_data).numpy()} for testing.", flush=True)
 
 	train_data = train_data.batch(batch_size)
 
 	savedModel = 'model.save'
 	if os.path.exists(savedModel):
-		print('Model loaded')
+		print('Model loaded', flush=True)
 		model = tf.keras.models.load_model(savedModel)
 	else:
 		model = tf.keras.Sequential()
