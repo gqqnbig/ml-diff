@@ -203,4 +203,4 @@ if __name__ == '__main__':
 
 	for prediction, actual, path in incorrectPredictions:
 		print(f'{path}: actual={actual}, prediction={prediction}')
-	print(f'Total incorrect prediction is {len(incorrectPredictions)}')
+	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / tf.data.experimental.cardinality(test_data).numpy() :.4f}.')
