@@ -195,9 +195,7 @@ if __name__ == '__main__':
 	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
 	model = trainModel(a, b)
 
-	predictions = tf.squeeze(model.predict(getColumn(test_data, 0).batch(batch_size)))
-	predictions = tf.where(predictions > 0.5, tf.ones_like(predictions, tf.int32), tf.zeros_like(predictions, tf.int32)).numpy()
-
+	predictions = model.predict_classes(getColumn(test_data, 0).batch(batch_size))
 	incorrectPredictions = zip(predictions, getColumn(test_data, 1), getColumn(test_data, 2))
 	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
 	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
