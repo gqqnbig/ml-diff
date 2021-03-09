@@ -184,6 +184,13 @@ if __name__ == '__main__':
 	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 
 	dataset = dataset.shuffle(length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath))
+
+	if __debug__:
+		a = list(dataset)[0]
+		b = list(dataset)[0]
+		assert len(a) == len(b)
+		assert all((a[i] == b[i]).numpy().all() for i in range(len(a))), 'dataset is not stable. It should return deterministic elements.'
+
 	train_length = int(length / 5 * 4)
 
 	# train data don't need file path
