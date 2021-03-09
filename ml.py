@@ -220,7 +220,7 @@ if __name__ == '__main__':
 	assert length > 0, 'Dataset length is incorrect.'
 	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.", flush=True)
 
-	maxEncoding = max([d[0].numpy().max() for d in dataset])
+	maxEncoding = max([d[0].numpy().max().item() for d in dataset])
 	print(f'Max encoding is {maxEncoding}.', flush=True)
 
 	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
