@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 import os
 
 # disable tensorflow info log
@@ -70,7 +71,6 @@ def getDiffFiles(folder):
 
 def loadDataset(folder) -> tf.data.Dataset:
 	vocabulary = set()
-	vocabulary.add(0)
 
 	max_line_length = 0
 
@@ -98,7 +98,11 @@ def loadDataset(folder) -> tf.data.Dataset:
 	for example in data:
 		vocabulary.update(set(example))
 
-	conversionDict = {v: i for i, v in enumerate(list(vocabulary))}
+	# The order in set is non-deterministic! Therefore we must sort it.
+	vocabulary = sorted(vocabulary)
+	vocabulary.insert(0, 0)
+	logging.info(f'vocabulary={vocabulary}')
+	conversionDict = {v: i for i, v in enumerate(vocabulary)}
 	assert conversionDict[0] == 0
 	data = [[conversionDict[c] for c in example] for example in data]
 
@@ -170,7 +174,15 @@ if __name__ == '__main__':
 		print('You have to specify dataset folder.\n\n' + usage, file=sys.stderr)
 		exit(1)
 
-	dataset = loadDataset(sys.argv[1])
+	try:
+		p = sys.argv.index('--log')
+		logLevel = sys.argv[p + 1]
+		numeric_level = getattr(logging, logLevel.upper(), None)
+		logging.basicConfig(level=numeric_level)
+	except:
+		pass
+
+	dataset = loadDataset(sys.argv[-1])
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
 		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.', flush=True)
