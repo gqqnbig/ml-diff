@@ -69,8 +69,8 @@ def getDiffFiles(folder):
 
 
 def loadDataset(folder):
-	vocaburary = set()
-	vocaburary.add(0)
+	vocabulary = set()
+	vocabulary.add(0)
 
 	max_line_length = 0
 
@@ -96,9 +96,9 @@ def loadDataset(folder):
 		if len(data[i]) < featureSize:
 			data[i] += (' ' * (featureSize - len(data[i])))
 	for example in data:
-		vocaburary.update(set(example))
+		vocabulary.update(set(example))
 
-	conversionDict = {v: i for i, v in enumerate(list(vocaburary))}
+	conversionDict = {v: i for i, v in enumerate(list(vocabulary))}
 	assert conversionDict[0] == 0
 	data = [[conversionDict[c] for c in example] for example in data]
 
