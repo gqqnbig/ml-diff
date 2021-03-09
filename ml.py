@@ -213,6 +213,8 @@ if __name__ == '__main__':
 	except:
 		pass
 
+	tf.random.set_seed(977)
+
 	dataset = loadDataset(sys.argv[-1])
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
@@ -241,6 +243,8 @@ if __name__ == '__main__':
 	train_data = dataset.take(train_length)
 	test_data = dataset.skip(train_length)
 	print(f"After shuffling the examples, let's use {len(list(train_data))} examples for training, {len(list(test_data))} for testing.", flush=True)
+
+	logging.info(f'test_data[0]: {list(test_data)[0]}')
 
 	a = train_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
 	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
