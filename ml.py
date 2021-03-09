@@ -126,7 +126,7 @@ def getColumn(ds: tf.data.Dataset, index):
 	return ds.map(lambda *d: d[index])
 
 
-def trainModel(train_data, test_data):
+def trainModel(maxEncoding, train_data, test_data):
 	"""
 
 	:param train_data: must be batched
@@ -200,7 +200,7 @@ if __name__ == '__main__':
 
 	a = train_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
 	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
-	model = trainModel(a, b)
+	model = trainModel(maxEncoding, a, b)
 
 	predictions = model.predict_classes(getColumn(test_data, 0).batch(batch_size))
 	incorrectPredictions = zip(predictions, getColumn(test_data, 1), getColumn(test_data, 2))
