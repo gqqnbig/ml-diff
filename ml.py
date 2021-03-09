@@ -68,7 +68,7 @@ def getDiffFiles(folder):
 			yield diff.path
 
 
-def loadDataset(folder):
+def loadDataset(folder) -> tf.data.Dataset:
 	vocabulary = set()
 	vocabulary.add(0)
 
