@@ -183,7 +183,7 @@ if __name__ == '__main__':
 
 	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 
-	dataset = dataset.shuffle(length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath))
+	dataset = dataset.shuffle(length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
 
 	if __debug__:
 		a = list(dataset)[0]
