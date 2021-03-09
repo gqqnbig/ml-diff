@@ -187,7 +187,8 @@ if __name__ == '__main__':
 	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
 		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.', flush=True)
 
-	length = tf.data.experimental.cardinality(dataset).numpy()
+	length = len(list(dataset))
+	assert length > 0, 'Dataset length is incorrect.'
 	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.", flush=True)
 
 	maxEncoding = max([d[0].numpy().max() for d in dataset])
@@ -208,7 +209,7 @@ if __name__ == '__main__':
 	# train data don't need file path
 	train_data = dataset.take(train_length)
 	test_data = dataset.skip(train_length)
-	print(f"After shuffling the examples, let's use {tf.data.experimental.cardinality(train_data).numpy()} examples for training, {tf.data.experimental.cardinality(test_data).numpy()} for testing.", flush=True)
+	print(f"After shuffling the examples, let's use {len(list(train_data))} examples for training, {len(list(test_data))} for testing.", flush=True)
 
 	a = train_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
 	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
@@ -222,4 +223,4 @@ if __name__ == '__main__':
 
 	for prediction, actual, path in incorrectPredictions:
 		print(f'{path}: actual={actual}, prediction={prediction}')
-	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / tf.data.experimental.cardinality(test_data).numpy() :.4f}.')
+	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / len(list(test_data)) :.4f}.')
