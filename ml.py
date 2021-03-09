@@ -130,6 +130,8 @@ def loadDataset(folder) -> tf.data.Dataset:
 	if logging.root.level <= logging.DEBUG:
 		timeStart = time.time()
 
+	# We don't have to cache from_tensor_slices
+
 	yesExamples = dataset.filter(lambda *d: d[1] == 1).cache()
 	noExamples = dataset.filter(lambda *d: d[1] == 0).cache()
 
@@ -244,6 +246,7 @@ if __name__ == '__main__':
 	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
 	model = trainModel(maxEncoding, a, b)
 
+	# batch size in predict/evaluate is irrelevant to the one in fit.
 	predictions = model.predict_classes(getColumn(test_data, 0).batch(batch_size))
 	incorrectPredictions = zip(predictions, getColumn(test_data, 1), getColumn(test_data, 2))
 	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
