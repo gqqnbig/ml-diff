@@ -2,6 +2,7 @@
 
 import logging
 import os
+import time
 
 # disable tensorflow info log
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -125,10 +126,12 @@ def loadDataset(folder) -> tf.data.Dataset:
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
 	dataset = tf.data.Dataset.from_tensor_slices((data, labels, inputFiles))
-	# dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
-	yesExamples = dataset.filter(lambda *d: d[1] == 1)
-	noExamples = dataset.filter(lambda *d: d[1] == 0)
+	if logging.root.level <= logging.DEBUG:
+		timeStart = time.time()
+
+	yesExamples = dataset.filter(lambda *d: d[1] == 1).cache()
+	noExamples = dataset.filter(lambda *d: d[1] == 0).cache()
 
 
 	yesLength = len(list(yesExamples))
@@ -145,6 +148,10 @@ def loadDataset(folder) -> tf.data.Dataset:
 	else:
 		dataset = dataset.shuffle(yesLength + noLength)
 
+	if logging.root.level <= logging.DEBUG:
+		l = len(list(dataset))
+		timeEnd = time.time()
+		logging.debug(f'Loading {l} data used {timeEnd - timeStart}s')
 	return dataset
 
 
