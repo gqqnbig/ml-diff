@@ -70,6 +70,11 @@ def getDiffFiles(folder):
 
 
 def loadDataset(folder) -> tf.data.Dataset:
+	"""
+
+	:param folder:
+	:return: shuffled dataset
+	"""
 	vocabulary = set()
 
 	max_line_length = 0
@@ -122,7 +127,24 @@ def loadDataset(folder) -> tf.data.Dataset:
 	dataset = tf.data.Dataset.from_tensor_slices((data, labels, inputFiles))
 	# dataset = dataset.map(lambda f: (tf.io.read_file(f), getLabel(f.numpy())))
 
-	print(f'There are {len(list(filter(lambda d: d[1] == 1, dataset)))} yes examples, and {len(list(filter(lambda d: d[1] == 0, dataset)))} no examples.', flush=True)
+	yesExamples = dataset.filter(lambda *d: d[1] == 1)
+	noExamples = dataset.filter(lambda *d: d[1] == 0)
+
+
+	yesLength = len(list(yesExamples))
+	noLength = len(list(noExamples))
+	print(f'There are {yesLength} yes examples, and {noLength} no examples.', flush=True)
+
+	if yesLength > noLength * 1.1 or noLength > yesLength * 1.1:
+		count = min(yesLength, noLength)
+		yesExamples = yesExamples.shuffle(yesLength).take(count)
+		noExamples = noExamples.shuffle(noLength).take(count)
+		print(f'Rebalance to {count} yes and {count} no examples.')
+
+		dataset = yesExamples.concatenate(noExamples).shuffle(count * 2)
+	else:
+		dataset = dataset.shuffle(yesLength + noLength)
+
 	return dataset
 
 
@@ -196,7 +218,7 @@ if __name__ == '__main__':
 
 	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 
-	dataset = dataset.shuffle(length).map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
+	dataset = dataset.map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
 
 	if __debug__:
 		a = list(dataset)[0]
