@@ -151,9 +151,9 @@ def trainModel(train_data, test_data):
 		model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
 		model.add(tf.keras.layers.Dense(100, activation='relu'))
 		model.add(tf.keras.layers.Dense(10, activation='relu'))
-		model.add(tf.keras.layers.Dense(NUM_LABELS, activation='sigmoid'))
+		model.add(tf.keras.layers.Dense(2, activation='softmax'))
 
-		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=sys.flags.optimize > 0)
+		model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'], run_eagerly=sys.flags.optimize > 0)
 		# model.summary()
 
 		num_epochs = 50
