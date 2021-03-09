@@ -233,7 +233,7 @@ if __name__ == '__main__':
 		a = list(dataset)[0]
 		b = list(dataset)[0]
 		assert len(a) == len(b)
-		assert all((a[i] == b[i]).numpy().all() for i in range(len(a))), 'dataset is not stable. It should return deterministic elements.'
+		assert all((a[i] == b[i]).numpy().all() for i in range(len(a))), 'dataset is not stable. It should return deterministic elements. You need to call cache after shuffle.'
 
 	train_length = int(length / 5 * 4)
 
