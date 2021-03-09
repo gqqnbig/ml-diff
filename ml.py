@@ -141,7 +141,7 @@ def trainModel(train_data, test_data):
 	if len(train_data.element_spec) == 3:
 		assert train_data.element_spec[2].dtype != tf.string, 'If dataset has 3 components, the last one must be sample weights of type int32.'
 
-	savedModel = 'model.save'
+	savedModel = 'SavedModel'
 	if os.path.exists(savedModel):
 		print('Model loaded', flush=True)
 		model = tf.keras.models.load_model(savedModel)
@@ -157,8 +157,8 @@ def trainModel(train_data, test_data):
 		# model.summary()
 
 		num_epochs = 50
-		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)])
-		model.save('model.save')
+		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5)])
+		model.save(savedModel)
 
 	return model
 
