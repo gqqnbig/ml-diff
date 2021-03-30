@@ -2,5 +2,6 @@
 # $ conda create --name <env> --file <this file>
 # platform: win-64
 # After installed, let PyCharm fully index the SDK before running.
-python=3.7
-tensorflow-gpu=2.3
+
+# python==3.7
+tensorflow-gpu==2.3
