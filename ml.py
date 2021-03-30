@@ -19,7 +19,14 @@ try:
 except:
 	pass
 
-MAX_FILE_SIZE_IN_KB = 10
+showProgress = '--no-progress' not in sys.argv
+
+try:
+	p = sys.argv.index('--size-limit-kb')
+	MAX_FILE_SIZE_IN_KB = int(sys.argv[p + 1])
+except:
+	MAX_FILE_SIZE_IN_KB = 10
+
 num_hiddens = 256
 vocab_size = 126 - 32 + 1
 lr = 1e2
@@ -192,7 +199,8 @@ def trainModel(maxEncoding, train_data, test_data):
 		# model.summary()
 
 		num_epochs = 50
-		model.fit(train_data, validation_data=test_data, epochs=num_epochs, callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5)])
+		model.fit(train_data, validation_data=test_data, epochs=num_epochs, verbose=1 if showProgress else 2,
+				  callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5)])
 		model.save(savedModel)
 
 	return model
