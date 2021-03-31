@@ -31,5 +31,5 @@ jobs:
     - name: Run machine learning
       run: |
           wget -q https://gqqnbig.me/dataset.7z
-          7za x -odataset dataset.7z
+          7za x -odataset -bso0 -bsp0 dataset.7z
           python3 -O ml.py --size-limit-kb 1 --no-progress --log error dataset
