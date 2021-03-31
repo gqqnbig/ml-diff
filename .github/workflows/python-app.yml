@@ -30,6 +30,6 @@ jobs:
     #    pytest
     - name: Run machine learning
       run: |
-          wget https://gqqnbig.me/dataset.7z
+          wget -q https://gqqnbig.me/dataset.7z
           7za x -odataset dataset.7z
-          python3 -O ./ml.py --size-limit-kb 1 --no-progress dataset
+          python3 -O ml.py --size-limit-kb 1 --no-progress --log error dataset

@@ -19,6 +19,18 @@ try:
 except:
 	pass
 
+
+try:
+	p = sys.argv.index('--log')
+	logLevel = sys.argv[p + 1]
+	numeric_level = getattr(logging, logLevel.upper(), None)
+	logging.basicConfig(level=numeric_level)
+
+	tf.get_logger().setLevel(logLevel)
+except:
+	pass
+
+
 showProgress = '--no-progress' not in sys.argv
 
 try:
@@ -212,14 +224,6 @@ if __name__ == '__main__':
 	if len(sys.argv) <= 1:
 		print('You have to specify dataset folder.\n\n' + usage, file=sys.stderr)
 		exit(1)
-
-	try:
-		p = sys.argv.index('--log')
-		logLevel = sys.argv[p + 1]
-		numeric_level = getattr(logging, logLevel.upper(), None)
-		logging.basicConfig(level=numeric_level)
-	except:
-		pass
 
 	tf.random.set_seed(977)
 
