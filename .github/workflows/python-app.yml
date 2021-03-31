@@ -32,4 +32,12 @@ jobs:
       run: |
           wget -q https://gqqnbig.me/dataset.7z
           7za x -odataset -bso0 -bsp0 dataset.7z
-          python3 -O ml.py --size-limit-kb 1 --no-progress --log error dataset
+          python3 -O ml.py --size-limit-kb 1 --no-progress --log error dataset > output
+    - name: Comment on PR
+      uses: harupy/comment-on-pr@master
+      if: ${{ github.event_name == 'pull_request' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        filename: ../../output
+    
