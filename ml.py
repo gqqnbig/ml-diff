@@ -269,6 +269,7 @@ if __name__ == '__main__':
 	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
 	incorrectPredictions = sorted(incorrectPredictions, key=lambda x: x[2])
 
-	for prediction, actual, path in incorrectPredictions:
-		print(f'{path}: actual={actual}, prediction={prediction}')
+	if logging.root.level <= logging.INFO:
+		for prediction, actual, path in incorrectPredictions:
+			logging.info(f'{path}: actual={actual}, prediction={prediction}')
 	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / len(list(test_data)) :.4f}.')
