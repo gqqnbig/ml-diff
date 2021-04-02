@@ -4,7 +4,7 @@ Install on Linux
 
 ```bash
 conda install cudnn=7.6 cudatoolkit=10.1
-pip install tensorflow-gpu=2.3
+pip install tensorflow-gpu==2.3
 ```
 
 Install on Windows
