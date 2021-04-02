@@ -254,12 +254,13 @@ if __name__ == '__main__':
 	# train data don't need file path
 	train_data = dataset.take(train_length)
 	test_data = dataset.skip(train_length)
-	print(f"After shuffling the examples, let's use {len(list(train_data))} examples for training, {len(list(test_data))} for testing.", flush=True)
+	test_length = len(list(test_data))
+	print(f"After shuffling the examples, let's use {len(list(train_data))} examples for training, {test_length} for testing.", flush=True)
 
 	logging.info(f'test_data[0]: {list(test_data)[0]}')
 
-	a = train_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
-	b = test_data.batch(batch_size).map(lambda x, y, filePath: (x, y))
+	a = train_data.shuffle(train_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
+	b = test_data.shuffle(test_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
 	model = trainModel(maxEncoding, a, b)
 
 	# batch size in predict/evaluate is irrelevant to the one in fit.
@@ -272,4 +273,4 @@ if __name__ == '__main__':
 	if logging.root.level <= logging.INFO:
 		for prediction, actual, path in incorrectPredictions:
 			logging.info(f'{path}: actual={actual}, prediction={prediction}')
-	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / len(list(test_data)) :.4f}.')
+	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / test_length :.4f}.')
