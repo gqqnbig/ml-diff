@@ -8,6 +8,7 @@ import time
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import tensorflow as tf
+print(f'tensorflow version is {tf.__version__}.')
 
 import sys
 import numpy as np
