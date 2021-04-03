@@ -266,10 +266,14 @@ if __name__ == '__main__':
 
 	# batch size in predict/evaluate is irrelevant to the one in fit.
 	predictions = model.predict_classes(getColumn(test_data, 0).batch(batch_size))
-	incorrectPredictions = zip(predictions, getColumn(test_data, 1), getColumn(test_data, 2))
+	actuals = getColumn(test_data, 1)
+	incorrectPredictions = zip(predictions, actuals, getColumn(test_data, 2))
 	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
 	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
 	incorrectPredictions = sorted(incorrectPredictions, key=lambda x: x[2])
+
+	cm = tf.math.confusion_matrix(tf.convert_to_tensor(list(actuals)), predictions)
+	print(f'Confusion matrix:\n{cm}\nFalse Positive={cm[1][0]}/{test_length}={cm[1][0] / test_length :.2f} (Actual is no, prediction is yes)')
 
 	if logging.root.level <= logging.INFO:
 		for prediction, actual, path in incorrectPredictions:
