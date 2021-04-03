@@ -213,7 +213,7 @@ def trainModel(maxEncoding, train_data, test_data):
 
 		num_epochs = 50
 		model.fit(train_data, validation_data=test_data, epochs=num_epochs, verbose=1 if showProgress else 2,
-				  callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5)])
+				  callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5, restore_best_weights=True)])
 		model.save(savedModel)
 
 	return model
