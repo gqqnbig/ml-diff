@@ -13,6 +13,8 @@ print(f'tensorflow version is {tf.__version__}.')
 import sys
 import numpy as np
 
+import helper
+
 try:
 	tf.__version__
 	# To fix progress bar, make each epoch update in-place.
@@ -49,18 +51,6 @@ NUM_LABELS = 1
 MAX_LINE_LENGTH = 200
 MAX_LINES = 100
 
-
-def getLabel(file):
-	file = os.path.normpath(file)
-	components = file.split(os.sep)
-	if components[-2] == 'yes':
-		return 1
-	elif components[-2] == 'no':
-		return 0
-
-	raise Exception(f'Label not found for file {file}')
-
-
 choppedLines = 0
 
 
@@ -77,19 +67,6 @@ def cutAndPadLine(line, length):
 		return line[:length]
 
 
-def getDiffFiles(folder):
-	for diff in os.scandir(folder):
-
-		if diff.name.startswith('.'):
-			continue
-
-		# fullPath = os.path.join(folder, diff)
-		if diff.is_dir():
-			yield from getDiffFiles(diff.path)
-		if diff.name.endswith('.diff') and diff.stat().st_size <= MAX_FILE_SIZE_IN_KB * 1024:
-			yield diff.path
-
-
 def loadDataset(folder) -> tf.data.Dataset:
 	"""
 
@@ -100,7 +77,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 
 	max_line_length = 0
 
-	inputFiles = sorted(getDiffFiles(folder))
+	inputFiles = sorted(helper.getDiffFiles(folder, MAX_FILE_SIZE_IN_KB))
 	data = []
 	for file in inputFiles:
 		with open(file, 'r', encoding='utf-8') as f:
@@ -132,7 +109,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 	assert conversionDict[0] == 0
 	data = [[conversionDict[c] for c in example] for example in data]
 
-	labels = [getLabel(f) for f in inputFiles]
+	labels = [helper.getLabel(f) for f in inputFiles]
 	# import timeit
 	# print(f"convert_as_int32 numpy_array: {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data, dtype=np.int32), tf.int32)).timeit(1)} s")
 	# print(f"convert_as_numpy_array (fastest!): {timeit.Timer(lambda : tf.convert_to_tensor(np.asarray(data), tf.int32)).timeit(1)} s")
@@ -175,10 +152,6 @@ def loadDataset(folder) -> tf.data.Dataset:
 		timeEnd = time.time()
 		logging.debug(f'Loading {l} data used {timeEnd - timeStart}s')
 	return dataset
-
-
-def getColumn(ds: tf.data.Dataset, index):
-	return ds.map(lambda *d: d[index])
 
 
 def trainModel(maxEncoding, train_data, test_data):
@@ -265,9 +238,9 @@ if __name__ == '__main__':
 	model = trainModel(maxEncoding, a, b)
 
 	# batch size in predict/evaluate is irrelevant to the one in fit.
-	predictions = model.predict_classes(getColumn(test_data, 0).batch(batch_size))
-	actuals = getColumn(test_data, 1)
-	incorrectPredictions = zip(predictions, actuals, getColumn(test_data, 2))
+	predictions = model.predict_classes(helper.getColumn(test_data, 0).batch(batch_size))
+	actuals = helper.getColumn(test_data, 1)
+	incorrectPredictions = zip(predictions, actuals, helper.getColumn(test_data, 2))
 	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
 	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
 	incorrectPredictions = sorted(incorrectPredictions, key=lambda x: x[2])
