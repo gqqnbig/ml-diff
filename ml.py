@@ -11,6 +11,7 @@ import tensorflow as tf
 print(f'tensorflow version is {tf.__version__}.')
 
 import sys
+import subprocess
 import numpy as np
 
 import helper
@@ -170,10 +171,17 @@ def trainModel(maxEncoding, train_data, test_data):
 	if len(train_data.element_spec) == 3:
 		assert train_data.element_spec[2].dtype != tf.string, 'If dataset has 3 components, the last one must be sample weights of type int32.'
 
-	savedModel = 'SavedModel'
-	if os.path.exists(savedModel):
+	try:
+		version = subprocess.check_output(['git', 'describe', '--always', '--dirty'], cwd=os.path.dirname(os.path.abspath(__file__)))
+		version = version.decode("utf-8").strip()
+	except Exception as e:
+		logging.error('Unable to determine code version from git. ' + str(e))
+		version = "unknown"
+	modelPath = os.path.join('SavedModels', version)
+
+	if os.path.exists(modelPath):
 		print('Model loaded', flush=True)
-		model = tf.keras.models.load_model(savedModel)
+		model = tf.keras.models.load_model(modelPath)
 	else:
 		model = tf.keras.Sequential()
 		model.add(tf.keras.layers.Flatten())
@@ -188,7 +196,7 @@ def trainModel(maxEncoding, train_data, test_data):
 		num_epochs = 50
 		model.fit(train_data, validation_data=test_data, epochs=num_epochs, verbose=1 if showProgress else 2,
 				  callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5, restore_best_weights=True)])
-		model.save(savedModel)
+		model.save(modelPath)
 
 	return model
 
