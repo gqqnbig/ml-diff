@@ -96,9 +96,6 @@ def loadDataset(folder) -> tf.data.Dataset:
 
 	# 确保data中每个sample长度相同
 	featureSize = max([len(sample) for sample in data])
-	for i in range(len(data)):
-		if len(data[i]) < featureSize:
-			data[i] += (' ' * (featureSize - len(data[i])))
 	for example in data:
 		vocabulary.update(set(example))
 
@@ -109,6 +106,9 @@ def loadDataset(folder) -> tf.data.Dataset:
 	conversionDict = {v: i for i, v in enumerate(vocabulary)}
 	assert conversionDict[0] == 0
 	data = [[conversionDict[c] for c in example] for example in data]
+	for i in range(len(data)):
+		if len(data[i]) < featureSize:
+			data[i] += [0] * (featureSize - len(data[i]))
 
 	labels = [helper.getLabel(f) for f in inputFiles]
 	# import timeit
