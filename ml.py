@@ -135,6 +135,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 
 	yesLength = len(list(yesExamples))
 	noLength = len(list(noExamples))
+	assert yesLength > 0 and noLength > 0
 	print(f'There are {yesLength} yes examples, and {noLength} no examples.', flush=True)
 
 	if yesLength > noLength * 1.1 or noLength > yesLength * 1.1:
