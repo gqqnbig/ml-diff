@@ -2,12 +2,16 @@
 
 import logging
 import os
+import re
+import string
 import time
 
 # disable tensorflow info log
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import tensorflow as tf
+from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
+
 print(f'tensorflow version is {tf.__version__}.')
 
 import sys
@@ -15,6 +19,21 @@ import subprocess
 import numpy as np
 
 import helper
+import textVectorizationHelper
+
+# vectorize_layer = TextVectorization(
+# 	standardize=None,
+# 	split=textVectorizationHelper.custom_split,
+# 	# max_tokens=vocab_size,
+# 	output_mode='int',
+# 	output_sequence_length=100)
+#
+# vectorize_layer.adapt(['hello \n world'])
+#
+# print(vectorize_layer.get_vocabulary())
+#
+# exit()
+
 
 try:
 	tf.__version__
@@ -44,7 +63,7 @@ except:
 	MAX_FILE_SIZE_IN_KB = 10
 
 num_hiddens = 256
-vocab_size = 126 - 32 + 1
+vocab_size = 10 * 1000
 lr = 1e2
 clipping_theta = 1e-2
 batch_size = 20
@@ -74,9 +93,6 @@ def loadDataset(folder) -> tf.data.Dataset:
 	:param folder:
 	:return: shuffled dataset
 	"""
-	vocabulary = set()
-
-	max_line_length = 0
 
 	inputFiles = sorted(helper.getDiffFiles(folder, MAX_FILE_SIZE_IN_KB))
 	data = []
@@ -87,28 +103,20 @@ def loadDataset(folder) -> tf.data.Dataset:
 			# 	f.readline()
 
 			# sample = f.read()
-			data.append(f.read())
-		# if len(lines) >= MAX_LINES:
-		# 	lines = lines[:MAX_LINES]
+			data.append(' '.join(textVectorizationHelper.split(textVectorizationHelper.standardize(f.read()))))
 
-		# if max_line_length < MAX_LINE_LENGTH:
-		# 	max_line_length = max(max_line_length, *[len(l) for l in lines])
-
-	# 确保data中每个sample长度相同
-	featureSize = max([len(sample) for sample in data])
-	for example in data:
-		vocabulary.update(set(example))
-
-	# The order in set is non-deterministic! Therefore we must sort it.
-	vocabulary = sorted(vocabulary)
-	vocabulary.insert(0, 0)
-	logging.info(f'vocabulary={vocabulary}')
-	conversionDict = {v: i for i, v in enumerate(vocabulary)}
-	assert conversionDict[0] == 0
-	data = [[conversionDict[c] for c in example] for example in data]
-	for i in range(len(data)):
-		if len(data[i]) < featureSize:
-			data[i] += [0] * (featureSize - len(data[i]))
+	# vectorize_layer = TextVectorization(
+	# 	standardize=None,
+	# 	split=textVectorizationHelper.custom_split,
+	# 	# max_tokens=vocab_size,
+	# 	output_mode='int',
+	# 	output_sequence_length=100)
+	#
+	# vectorize_layer.adapt(['hello world'])
+	#
+	# print(vectorize_layer.get_vocabulary())
+	#
+	# exit()
 
 	labels = [helper.getLabel(f) for f in inputFiles]
 	# import timeit
@@ -119,8 +127,8 @@ def loadDataset(folder) -> tf.data.Dataset:
 	# exit()
 
 	print('data loaded. Converting to tensor...', flush=True)
-	data = np.asarray(data, np.int32)
-	data = tf.convert_to_tensor(data, tf.int32)
+	# data = np.asarray(data)
+	data = tf.ragged.constant(data)
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
 	dataset = tf.data.Dataset.from_tensor_slices((data, labels, inputFiles))
@@ -156,7 +164,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 	return dataset
 
 
-def trainModel(maxEncoding, train_data, test_data):
+def trainModel(train_data, test_data):
 	"""
 
 	:param train_data: must be batched
@@ -166,8 +174,10 @@ def trainModel(maxEncoding, train_data, test_data):
 
 	assert len(train_data.element_spec) == len(test_data.element_spec), 'train_data and test_data must have the same components.'
 	for i in range(len(train_data.element_spec)):
-		assert train_data.element_spec[i].shape.ndims == test_data.element_spec[i].shape.ndims, \
-			f'The shape of component {i} does not match.\ntrain_data.element_spec[{i}].shape={train_data.element_spec[i].shape}\ntest_data.element_spec[{i}].shape={test_data.element_spec[i].shape}'
+		# ragged tensor may not have shape.
+		if isinstance(train_data.element_spec[0], tf.RaggedTensorSpec) == False:
+			assert train_data.element_spec[i].shape.ndims == test_data.element_spec[i].shape.ndims, \
+				f'The shape of component {i} does not match.\ntrain_data.element_spec[{i}].shape={train_data.element_spec[i].shape}\ntest_data.element_spec[{i}].shape={test_data.element_spec[i].shape}'
 	if len(train_data.element_spec) == 3:
 		assert train_data.element_spec[2].dtype != tf.string, 'If dataset has 3 components, the last one must be sample weights of type int32.'
 
@@ -182,22 +192,73 @@ def trainModel(maxEncoding, train_data, test_data):
 	if helper.loadModelFromDisk(modelPath):
 		model = tf.keras.models.load_model(modelPath)
 	else:
+		if __debug__:
+			str_data = helper.getColumn(train_data, 0).concatenate(helper.getColumn(test_data, 0))
+			testTextVectorization(str_data, standardize=None,
+								  split=textVectorizationHelper.custom_split,
+								  output_mode='int',
+								  output_sequence_length=sequence_length)
+
+		vectorize_layer = TextVectorization(
+			standardize=None,
+			split=textVectorizationHelper.custom_split,
+			ngrams=2,
+			max_tokens=vocab_size,
+			output_mode='int',
+			# I use train_data plus test_data to adapt the vectorization layer.
+			# If I don't set output_sequence_length, the layer will infer from train_data plus test_data.
+			# However when training, the layer will infer output_sequence_length again, which may cause
+			# mismatch.
+			output_sequence_length=400)
+
+		vectorize_layer.adapt(helper.getColumn(train_data, 0).concatenate(helper.getColumn(test_data, 0)))
+		# vocabulary = vectorize_layer.get_vocabulary()
+
+		# a=vectorize_layer.__call__(train_data)
+		# a=tf.keras.layers.Embedding(vocab_size, embedding_dim).__call__(a)
+
+		embedding_dim = 16
+
 		model = tf.keras.Sequential()
+		model.add(vectorize_layer)
+		model.add(tf.keras.layers.Embedding(vocab_size, embedding_dim))
 		model.add(tf.keras.layers.Flatten())
-		model.add(tf.keras.layers.Dense(maxEncoding, activation='relu'))
 		model.add(tf.keras.layers.Dense(100, activation='relu'))
 		model.add(tf.keras.layers.Dense(10, activation='relu'))
 		model.add(tf.keras.layers.Dense(2, activation='softmax'))
 
-		model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'], run_eagerly=sys.flags.optimize > 0)
-		# model.summary()
+		if __debug__:
+			y_pred = model.predict(helper.getColumn(train_data, 0))
+			assert len(y_pred.shape) == 2, \
+				'The prediction should have 2 dimensions. The first dimension is the number of examples; the second one is 2, indicating a probability distribution.'
 
-		num_epochs = 50
+		model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'], run_eagerly=sys.flags.optimize > 0)
+
+		num_epochs = 20
 		model.fit(train_data, validation_data=test_data, epochs=num_epochs, verbose=1 if showProgress else 2,
 				  callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_sparse_categorical_accuracy', patience=5, restore_best_weights=True)])
+
+		model.summary()
 		model.save(modelPath)
 
 	return model
+
+
+def testTextVectorization(str_data, **kwargs):
+	# looks like kwargs is pass by value
+	if 'ngrams' in kwargs:
+		del kwargs['ngrams']
+
+	vectorize_layer = TextVectorization(**kwargs, ngrams=1)
+	vectorize_layer.adapt(str_data)
+	vocabulary = vectorize_layer.get_vocabulary()
+	assert '\n' in vocabulary
+	assert len(list(filter(lambda s: len(s) > 1 and (s[0] == '\n' or s[-1] == '\n'), vocabulary))) == 0, \
+		r'No token should start with or end with \n.'
+	print(f'Without capping, the 1-gram vocabulary size is {len(vocabulary)}.')
+	vectorize_layer = TextVectorization(**kwargs, ngrams=2)
+	vectorize_layer.adapt(str_data)
+	print(f'Without capping, the 2-gram vocabulary size is {len(vectorize_layer.get_vocabulary())}.')
 
 
 usage = f'{os.path.basename(sys.argv[0])} dataset-folder'
@@ -211,19 +272,27 @@ if __name__ == '__main__':
 
 	dataset = loadDataset(sys.argv[-1])
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
-	print(f'Dataset loaded. Each example has {dataset.element_spec[0].shape[0]} features and a {dataset.element_spec[1].dtype.name} label. ' +
-		  'However, without evaluating the dataset, it\'s unclear the total number of examples in this dataset.', flush=True)
+	print('Dataset loaded.')
+	if isinstance(dataset.element_spec[0], tf.RaggedTensorSpec):
+		print(f'Each example has feature of variable length and a label of {dataset.element_spec[1].dtype.name}.', flush=True)
+		print('Model will further process the features.')
+	elif len(dataset.element_spec[0].shape) == 0:
+		print(f'Each example has feature of {dataset.element_spec[0].dtype.name} and a label of {dataset.element_spec[1].dtype.name}.', flush=True)
+	else:
+		print(f'Each example has {dataset.element_spec[0].shape[0]} features and a label of {dataset.element_spec[1].dtype.name}.', flush=True)
 
 	length = len(list(dataset))
 	assert length > 0, 'Dataset length is incorrect.'
 	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.", flush=True)
 
-	maxEncoding = max([d[0].numpy().max().item() for d in dataset])
-	print(f'Max encoding is {maxEncoding}.', flush=True)
-
-	print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
-
-	dataset = dataset.map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
+	# featureSize = len(list(dataset.take(1))[0][0])
+	# maxEncoding = max([d[0].numpy().max().item() for d in dataset])
+	# print(f'Max encoding is {maxEncoding}.', flush=True)
+	#
+	# print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
+	#
+	# dataset = dataset.map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
+	dataset = dataset.cache()
 
 	if __debug__:
 		a = list(dataset)[0]
@@ -243,7 +312,7 @@ if __name__ == '__main__':
 
 	a = train_data.shuffle(train_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
 	b = test_data.shuffle(test_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
-	model = trainModel(maxEncoding, a, b)
+	model = trainModel(a, b)
 
 	# batch size in predict/evaluate is irrelevant to the one in fit.
 	predictions = model.predict_classes(helper.getColumn(test_data, 0).batch(batch_size))
