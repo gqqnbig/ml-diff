@@ -2,8 +2,6 @@
 
 import logging
 import os
-import re
-import string
 import time
 
 # disable tensorflow info log
@@ -16,7 +14,6 @@ print(f'tensorflow version is {tf.__version__}.')
 
 import sys
 import subprocess
-import numpy as np
 
 import helper
 import textVectorizationHelper
@@ -72,6 +69,7 @@ MAX_LINE_LENGTH = 200
 MAX_LINES = 100
 
 choppedLines = 0
+maxSequenceLength = 0
 
 
 def cutAndPadLine(line, length):
@@ -93,17 +91,20 @@ def loadDataset(folder) -> tf.data.Dataset:
 	:param folder:
 	:return: shuffled dataset
 	"""
+	global maxSequenceLength
 
 	inputFiles = sorted(helper.getDiffFiles(folder, MAX_FILE_SIZE_IN_KB))
 	data = []
+	maxSequenceLength = 0
 	for file in inputFiles:
 		with open(file, 'r', encoding='utf-8') as f:
 			# 抛弃开头5行
 			# for i in range(5):
 			# 	f.readline()
 
-			# sample = f.read()
-			data.append(' '.join(textVectorizationHelper.split(textVectorizationHelper.standardize(f.read()))))
+			split = textVectorizationHelper.split(textVectorizationHelper.standardize(f.read()))
+			maxSequenceLength = max(maxSequenceLength, len(split))
+			data.append(' '.join(split))
 
 	# vectorize_layer = TextVectorization(
 	# 	standardize=None,
@@ -164,7 +165,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 	return dataset
 
 
-def trainModel(train_data, test_data):
+def trainModel(sequence_length, train_data, test_data):
 	"""
 
 	:param train_data: must be batched
@@ -209,9 +210,9 @@ def trainModel(train_data, test_data):
 			# If I don't set output_sequence_length, the layer will infer from train_data plus test_data.
 			# However when training, the layer will infer output_sequence_length again, which may cause
 			# mismatch.
-			output_sequence_length=400)
+			output_sequence_length=sequence_length)
 
-		vectorize_layer.adapt(helper.getColumn(train_data, 0).concatenate(helper.getColumn(test_data, 0)))
+		vectorize_layer.adapt(helper.getColumn(train_data, 0))
 		# vocabulary = vectorize_layer.get_vocabulary()
 
 		# a=vectorize_layer.__call__(train_data)
@@ -283,7 +284,8 @@ if __name__ == '__main__':
 
 	length = len(list(dataset))
 	assert length > 0, 'Dataset length is incorrect.'
-	print(f"Let's eagerly evaluate the dataset, we find out there are {length} examples.", flush=True)
+
+	print(f'Max sequence length is {maxSequenceLength}.')
 
 	# featureSize = len(list(dataset.take(1))[0][0])
 	# maxEncoding = max([d[0].numpy().max().item() for d in dataset])
@@ -312,7 +314,7 @@ if __name__ == '__main__':
 
 	a = train_data.shuffle(train_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
 	b = test_data.shuffle(test_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
-	model = trainModel(a, b)
+	model = trainModel(maxSequenceLength, a, b)
 
 	# batch size in predict/evaluate is irrelevant to the one in fit.
 	predictions = model.predict_classes(helper.getColumn(test_data, 0).batch(batch_size))
