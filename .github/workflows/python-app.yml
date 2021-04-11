@@ -32,7 +32,10 @@ jobs:
       run: |
           wget -q https://gqqnbig.me/dataset.7z
           7za x -odataset -bso0 -bsp0 dataset.7z
+          set -o pipefail
           python3 -O ml.py --size-limit-kb 1 --no-progress --log error dataset | tee output
+          python3 -O ml.py --size-limit-kb 1 --no-progress --log error dataset | tee second
+          grep 'Load model' second > /dev/null
     - name: Comment on PR
       uses: harupy/comment-on-pr@c0522c44600040927a120b9309b531e3cb6f8d48
       if: ${{ github.event_name == 'pull_request' }}
