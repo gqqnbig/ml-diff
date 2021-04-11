@@ -1,4 +1,5 @@
 import os
+import sys
 
 import tensorflow as tf
 
@@ -35,3 +36,17 @@ def getDiffFiles(folder, maxFileSize: int):
 
 def getColumn(ds: tf.data.Dataset, index):
 	return ds.map(lambda *d: d[index])
+
+
+def loadModelFromDisk(modelPath: str) -> bool:
+	if os.path.exists(modelPath):
+		if modelPath.endswith('-dirty'):
+			print(f'Are you sure to read {modelPath}? [y]', flush=True)
+			r = sys.stdin.read(1)
+			if r.strip() == 'y':
+				return True
+		else:
+			print(f'Load model from {modelPath}', flush=True)
+			return True
+
+	return False

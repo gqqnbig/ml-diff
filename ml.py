@@ -179,8 +179,7 @@ def trainModel(maxEncoding, train_data, test_data):
 		version = "unknown"
 	modelPath = os.path.join('SavedModels', version)
 
-	if os.path.exists(modelPath):
-		print('Model loaded', flush=True)
+	if helper.loadModelFromDisk(modelPath):
 		model = tf.keras.models.load_model(modelPath)
 	else:
 		model = tf.keras.Sequential()
