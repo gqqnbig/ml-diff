@@ -13,6 +13,7 @@ def custom_standardization(input_data: tf.Tensor):
 # return tf.strings.regex_replace(stripped_html, '[%s]' % re.escape(string.punctuation), '')
 
 
+@tf.keras.utils.register_keras_serializable()
 def custom_split(input_data: tf.Tensor):
 	return tf.strings.split(input_data, ' ')
 
