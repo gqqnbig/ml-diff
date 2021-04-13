@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import re
 import sys
@@ -284,36 +285,51 @@ def createLabelForRepo(repo, labelFile):
 				print(f'{diff.path} has error: {e}', file=sys.stderr)
 
 
+def scanRepo(repo):
+	print(f'open {repo}')
+	createLabelForRepo(os.path.join(r'D:\renaming\diffs', repo), rf'D:\renaming\diffs\{repo}.txt')
+
+
 if __name__ == '__main__':
-	createLabels(r'D:\renaming\data\real\camel\092c7053e4b47a31058b12822456502e355fcbd2.diff')
+	# for path in os.scandir(r'D:\renaming\diffs'):
+	# 	if path.is_dir():
+	# 		scanRepo(path.name)
+	#
+	# exit()
 
+	pool = multiprocessing.Pool(4)
+	multiple_results = [pool.apply_async(scanRepo, (path.name,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir()]
+	print([res.get() for res in multiple_results])
 
-	repos = ["camel",
-			 "camunda-bpm-platform",
-			 "dbeaver",
-			 "EhViewer",
-			 "Geyser",
-			 "iceberg",
-			 "Java",
-			 "java-design-patterns",
-			 "jenkins",
-			 "keycloak",
-			 "libgdx",
-			 "Mindustry",
-			 # "NewPipe",
-			 "openapi-generator",
-			 "quarkus",
-			 "Signal-Android",
-			 "spring-petclinic",
-			 "strimzi-kafka-operator",
-			 "testcontainers-java",
-			 "tutorials",
-			 "wiremock",
-			 ]
+# createLabels(r'D:\renaming\data\real\camel\092c7053e4b47a31058b12822456502e355fcbd2.diff')
+#
+#
+# repos = ["camel",
+# 		 "camunda-bpm-platform",
+# 		 "dbeaver",
+# 		 "EhViewer",
+# 		 "Geyser",
+# 		 "iceberg",
+# 		 "Java",
+# 		 "java-design-patterns",
+# 		 "jenkins",
+# 		 "keycloak",
+# 		 "libgdx",
+# 		 "Mindustry",
+# 		 # "NewPipe",
+# 		 "openapi-generator",
+# 		 "quarkus",
+# 		 "Signal-Android",
+# 		 "spring-petclinic",
+# 		 "strimzi-kafka-operator",
+# 		 "testcontainers-java",
+# 		 "tutorials",
+# 		 "wiremock",
+# 		 ]
 
-	for repo in repos:
-		print('open ' + repo)
-		createLabelForRepo(r'D:\renaming\data\real\\' + repo, rf'D:\renaming\data\real\{repo}.txt')
+# for repo in repos:
+# 	print('open ' + repo)
+# 	createLabelForRepo(r'D:\renaming\diffs\\' + repo, rf'D:\renaming\diffs\{repo}.txt')
 # createLabels(r'D:\renaming\data\real\AntennaPod\0499ef60ac7122dfad8c1579327c72eaca37cde9.diff')
 #
 # exit()
