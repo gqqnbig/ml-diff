@@ -5,7 +5,7 @@ import sys
 
 import multiprocessing
 
-import helper
+import FileEncodingConverter
 
 
 def findLineStartsWith(lines, str, start):
@@ -82,7 +82,7 @@ def filterCombinedDiff(diffPath: str):
 				print(f'{diffPath}: {str(e)}\n', file=sys.stderr)
 				return
 			retried = True
-			ignoreEncodingError = helper.convertToUtf8(diffPath) == False
+			ignoreEncodingError = FileEncodingConverter.convertToUtf8(diffPath) == False
 		except Exception as e:
 			print(diffPath + ': ' + str(e), file=sys.stderr)
 			return
