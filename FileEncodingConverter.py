@@ -51,7 +51,7 @@ def convertToUtf8(filePath: str):
 			e.write(text)
 		print(f'Converted {filePath} from {from_codec} to UTF-8.')
 		return True
-	except TimeoutError:
+	except multiprocessing.TimeoutError:
 		print(f'Unable to determine encoding of {filePath} within time limit.', file=sys.stderr)
 		return False
 	except Exception as e:
