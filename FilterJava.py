@@ -5,40 +5,87 @@ import sys
 
 import multiprocessing
 
+import helper
+
+
+def findLineStartsWith(lines, str, start):
+	"""
+	if str is not found, return len(lines).
+
+	:param lines:
+	:param str:
+	:param start:
+	:return:
+	"""
+	while start < len(lines) and lines[start].startswith(str) == False:
+		start += 1
+	return start
+
 
 def removeNonJava(lines):
 	if len(lines) == 0:
 		return lines
 
-	if lines[0].startswith('diff --git '):
-		nextPartIndex = 4
+	if lines[0].startswith('diff --git ') == False:
+		return lines
+
+	javaLines = []
+	i = 0
+	while i < len(lines):
+		nextPartIndex = i + 1
 		while nextPartIndex < len(lines) and lines[nextPartIndex].startswith('diff --git ') == False:
 			nextPartIndex += 1
+		if lines[i].rstrip().endswith('.java'):
+			javaLines.extend(lines[i + 4:nextPartIndex])
 
-		if lines[0].rstrip().endswith('.java'):
-			return lines[4:nextPartIndex - 1] + removeNonJava(lines[nextPartIndex:-1])
-		else:
-			return removeNonJava(lines[nextPartIndex:-1])
+		i = nextPartIndex
 
-	return lines
+	return javaLines
+
+
+# def convertToUtf8(filePath:str):
+# 	detector = UniversalDetector()
+# 	for line in open(filePath,'rb'):
+# 		detector.feed(line)
+# 		if detector.done:
+# 			break
+# 	detector.close()
+# 	print(detector.result)
+# 	if detector.result is not None:
+#
+# 		with open(filePath, 'r', encoding=detector.result.encoding) as f:
+# 			content= f.read()
+#
 
 
 def filterCombinedDiff(diffPath: str):
-	try:
-		with open(diffPath, 'r', encoding='utf-8') as f:
-			lines = f.readlines()
+	ignoreEncodingError = False
+	retried = False
+	while True:
+		try:
+			with open(diffPath, 'r', encoding='utf-8', errors='ignore' if ignoreEncodingError else None) as f:
+				lines = f.readlines()
 
-		l = len(lines)
-		lines = removeNonJava(lines)
-		if len(lines) == 0:
-			print(f'Delete {diffPath}.')
-			os.remove(diffPath)
-		elif l != len(lines):
-			print(f'Remove {l - len(lines)} lines in {diffPath}.')
-			with open(diffPath, 'w', encoding='utf-8') as f:
-				f.writelines(lines)
-	except Exception as e:
-		print(diffPath + '\n' + str(e), file=sys.stderr)
+			l = len(lines)
+			lines = removeNonJava(lines)
+			if len(lines) == 0:
+				print(f'Delete {diffPath}.')
+				os.remove(diffPath)
+			elif l != len(lines):
+				print(f'Remove {l - len(lines)} lines in {diffPath}.')
+				with open(diffPath, 'w', encoding='utf-8') as f:
+					f.writelines(lines)
+
+			return
+		except UnicodeDecodeError as e:
+			if retried:
+				print(f'{diffPath}: {str(e)}\n', file=sys.stderr)
+				return
+			retried = True
+			ignoreEncodingError = helper.convertToUtf8(diffPath) == False
+		except Exception as e:
+			print(diffPath + ': ' + str(e), file=sys.stderr)
+			return
 
 
 def scanRepo(repoPath):
@@ -49,9 +96,9 @@ def scanRepo(repoPath):
 
 
 if __name__ == '__main__':
-	filterCombinedDiff(r'D:\renaming\diffs\repo1000\2125267.diff')
+	filterCombinedDiff(r'D:\renaming\diffs\repo105\479132.diff')
 	exit()
 
 	pool = multiprocessing.Pool(4)
-	multiple_results = [pool.apply_async(scanRepo, (r'D:\renaming\diffs\\' + path,)) for path in os.listdir(r'D:\renaming\diffs')]
-	print([res.get() for res in multiple_results])
+	multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir()]
+	[res.get() for res in multiple_results]
