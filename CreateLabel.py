@@ -100,14 +100,28 @@ java_keywords = {"abstract",
 				 }
 
 
+def dos2unix(file_path):
+	# replacement strings
+	WINDOWS_LINE_ENDING = b'\r\n'
+	UNIX_LINE_ENDING = b'\n'
+
+	with open(file_path, 'rb') as open_file:
+		content = open_file.read()
+
+	content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+
+	with open(file_path, 'wb') as open_file:
+		open_file.write(content)
+
+
 def createLabels(file: str):
 	with open(file, 'r', encoding='utf-8') as f:
 		lines = f.readlines()
-		if type(f.newlines) is tuple and len(f.newlines) > 1:
-			raise Exception(f'File {file} uses mixed line endings, which is not supported.')
-
-		if f.newlines != '\n':
-			raise Exception('Currently, only Linux line ending (\\n) is supported.')
+		if type(f.newlines) is tuple and len(f.newlines) > 1 or f.newlines != '\n':
+			f.close()
+			dos2unix(file)
+			f = open(file, 'r', encoding='utf-8')
+			lines = f.readlines()
 
 	rearrangeBalancedAddRemove(lines, file)
 
