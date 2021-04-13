@@ -1,6 +1,6 @@
 import os
 import re
-
+import sys
 
 # from typing import List, Tuple, Optional
 #
@@ -257,28 +257,31 @@ def createLabelForRepo(repo, labelFile):
 			if diff.is_dir() or not diff.name.endswith('.diff'):
 				continue
 
-			labels = createLabels(diff.path)
-			if labels is not None:
-				labelFile.write(diff.name[0:-len('.diff')])
-				labelFile.write('|')
-				# labelFile.write(str(labels)[1:-1])
-				labelFile.write('|')
+			try:
+				labels = createLabels(diff.path)
+				if labels is not None:
+					labelFile.write(diff.name[0:-len('.diff')])
+					labelFile.write('|')
+					# labelFile.write(str(labels)[1:-1])
+					labelFile.write('|')
 
-				s = ', '.join([k + "->" + v for k, v in labels.items()])
-				if 0 < len(labels) <= 2:
-					labelFile.write('y')
+					s = ', '.join([k + "->" + v for k, v in labels.items()])
+					if 0 < len(labels) <= 2:
+						labelFile.write('y')
 
-					# print(diff.name + ": " + s)
-					labelFile.write('|' + s)
-				elif len(labels) > 2:
-					labelFile.write('skip')
+						# print(diff.name + ": " + s)
+						labelFile.write('|' + s)
+					elif len(labels) > 2:
+						labelFile.write('skip')
 
-					# print(diff.name + ": " + s)
-					labelFile.write('|' + s)
-				else:
-					labelFile.write('n')
+						# print(diff.name + ": " + s)
+						labelFile.write('|' + s)
+					else:
+						labelFile.write('n')
 
-				labelFile.write('\n')
+					labelFile.write('\n')
+			except Exception as e:
+				print(f'{diff.path} has error: {e}', file=sys.stderr)
 
 
 if __name__ == '__main__':
