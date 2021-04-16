@@ -10,8 +10,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
 
-print(f'tensorflow version is {tf.__version__}.')
-
 import sys
 import subprocess
 
@@ -268,6 +266,8 @@ if __name__ == '__main__':
 	if len(sys.argv) <= 1:
 		print('You have to specify dataset folder.\n\n' + usage, file=sys.stderr)
 		exit(1)
+
+	print(f'tensorflow version is {tf.__version__}.')
 
 	tf.random.set_seed(977)
 
