@@ -15,6 +15,7 @@ import subprocess
 
 import helper
 import textVectorizationHelper
+import RepeatTimer
 
 # vectorize_layer = TextVectorization(
 # 	standardize=None,
@@ -92,9 +93,17 @@ def loadDataset(folder) -> tf.data.Dataset:
 	global maxSequenceLength
 
 	inputFiles = sorted(helper.getDiffFiles(folder, MAX_FILE_SIZE_IN_KB))
+	i = 0
 	data = []
 	maxSequenceLength = 0
-	for file in inputFiles:
+
+	def reportProgress():
+		print(f'Loading {i}/{len(inputFiles)}')
+
+	timer = RepeatTimer.RepeatTimer(5, function=reportProgress)
+	timer.start()
+	while i < len(inputFiles):
+		file = inputFiles[i]
 		with open(file, 'r', encoding='utf-8') as f:
 			# 抛弃开头5行
 			# for i in range(5):
@@ -103,6 +112,9 @@ def loadDataset(folder) -> tf.data.Dataset:
 			split = textVectorizationHelper.split(textVectorizationHelper.standardize(f.read()))
 			maxSequenceLength = max(maxSequenceLength, len(split))
 			data.append(' '.join(split))
+
+		i += 1
+	timer.cancel()
 
 	# vectorize_layer = TextVectorization(
 	# 	standardize=None,
