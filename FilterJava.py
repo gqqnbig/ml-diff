@@ -36,10 +36,8 @@ def removeNonJava(lines: List[str]):
 		nextPartIndex = findLineStartsWith(lines, 'diff --git ', i + 1)
 		if lines[i].rstrip().endswith('.java'):
 			j = findLineStartsWith(lines, '@@', i + 1)
-			if j > findLineStartsWith(lines, 'diff --git ', i + 1):
-				continue
-
-			javaLines.extend(lines[j:nextPartIndex])
+			if j < findLineStartsWith(lines, 'diff --git ', i + 1):
+				javaLines.extend(lines[j:nextPartIndex])
 
 		i = nextPartIndex
 
