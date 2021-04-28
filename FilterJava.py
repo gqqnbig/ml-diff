@@ -15,7 +15,7 @@ def findLineStartsWith(lines, str, start):
 
 	:param lines:
 	:param str:
-	:param start:
+	:param start: inclusive
 	:return:
 	"""
 	while start < len(lines) and lines[start].startswith(str) == False:
@@ -33,11 +33,13 @@ def removeNonJava(lines: List[str]):
 	javaLines = []
 	i = 0
 	while i < len(lines):
-		nextPartIndex = i + 1
-		while nextPartIndex < len(lines) and lines[nextPartIndex].startswith('diff --git ') == False:
-			nextPartIndex += 1
+		nextPartIndex = findLineStartsWith(lines, 'diff --git ', i + 1)
 		if lines[i].rstrip().endswith('.java'):
-			javaLines.extend(lines[i + 4:nextPartIndex])
+			j = findLineStartsWith(lines, '@@', i + 1)
+			if j > findLineStartsWith(lines, 'diff --git ', i + 1):
+				continue
+
+			javaLines.extend(lines[j:nextPartIndex])
 
 		i = nextPartIndex
 
