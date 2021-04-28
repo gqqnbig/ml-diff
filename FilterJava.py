@@ -4,6 +4,7 @@ import os
 import sys
 
 import multiprocessing
+from typing import List
 
 import FileEncodingConverter
 
@@ -22,7 +23,7 @@ def findLineStartsWith(lines, str, start):
 	return start
 
 
-def removeNonJava(lines):
+def removeNonJava(lines: List[str]):
 	if len(lines) == 0:
 		return lines
 
