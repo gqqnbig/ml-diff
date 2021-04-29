@@ -100,6 +100,6 @@ if __name__ == '__main__':
 	filterCombinedDiff(r'D:\renaming\diffs\repo105\479132.diff')
 	exit()
 
-	pool = multiprocessing.Pool(4)
-	multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir()]
-	[res.get() for res in multiple_results]
+	with multiprocessing.Pool(4) as pool:
+		multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir()]
+		[res.get() for res in multiple_results]
