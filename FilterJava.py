@@ -101,5 +101,5 @@ if __name__ == '__main__':
 	exit()
 
 	with multiprocessing.Pool(4) as pool:
-		multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir()]
+		multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir() and path.name[0] != '.']
 		[res.get() for res in multiple_results]
