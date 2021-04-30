@@ -155,6 +155,8 @@ def createLabels(file: str):
 				if oldWord in java_keywords or newWord in java_keywords:
 					return None
 
+				assert len(oldWord) > 0
+				assert len(newWord) > 0
 				if oldWord in labels:
 					if labels[oldWord] != newWord:
 						return None
@@ -209,8 +211,10 @@ def getWord(content: str, index):
 	:return: return None if the given index is not a word. Otherwise return the word
 	"""
 	assert index >= 0
+	if index > len(content):
+		raise Exception('index must be less than or equal to the length of content.')
 
-	if content[index].isalnum() == False and content[index] != '_':
+	if index == len(content) or content[index].isalnum() == False and content[index] != '_':
 		index -= 1
 		if content[index].isalnum() == False and content[index] != '_':
 			return None
