@@ -143,6 +143,14 @@ def createLabels(file: str):
 			removedLine = line
 		elif line[0] == '+':
 			if removedLine is not None:
+				line = line[1:]
+				removedLine = removedLine[1:]
+				
+				if len(line) == 0 and len(removedLine) == 0:
+					break
+				if len(line) == 0 or len(removedLine) == 0:
+					return None
+					
 				d = findDifferenceStart(line, removedLine, 1)
 
 				oldWord = getWord(removedLine, d)
@@ -206,10 +214,13 @@ def rearrangeBalancedAddRemove(lines: list, file):
 def getWord(content: str, index):
 	"""
 
-	:param content:
+	:param content: length must be greater than 0.
 	:param index:
 	:return: return None if the given index is not a word. Otherwise return the word
 	"""
+
+	assert content is not None and len(content) > 0, 'Length of content must be greater than 0.'
+
 	assert index >= 0
 	if index > len(content):
 		raise Exception('index must be less than or equal to the length of content.')
