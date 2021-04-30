@@ -210,35 +210,29 @@ def getWord(content: str, index):
 	"""
 	assert index >= 0
 
-	end = None
-	for i in range(index, len(content)):
+	if content[index].isalnum() == False and content[index] != '_':
+		index -= 1
+		if content[index].isalnum() == False and content[index] != '_':
+			return None
+
+	end = index + 1
+	while end < len(content):
 		# doesn't consider unicode characters for now.
-		if content[i].isalnum() or content[i] == '_':
-			continue
+		if content[end].isalnum() or content[end] == '_':
+			end += 1
 		else:
-			end = i
 			break
 
-	start = None
-	for i in range(index - 1, 0, -1):
+	start = index
+	while start >= 0:
 		# doesn't consider unicode characters for now.
-		if content[i].isalnum() or content[i] == '_':
-			continue
+		if content[start].isalnum() or content[start] == '_':
+			start -= 1
 		else:
-			start = i + 1
 			break
 
-	if start is not None:
-		while start < len(content) and content[start].isnumeric():
-			start += 1
-
-	if start is None or end is None or start >= end:
-		return None
-
-	if start <= index <= end:
-		return content[start:end]
-	else:
-		return None
+	start += 1
+	return content[start:end]
 
 
 # def isIdentifierRenaming(diffFile: str) -> Optional[Tuple[List[int], List[str]]]:
