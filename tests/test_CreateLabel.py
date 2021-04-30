@@ -26,3 +26,7 @@ def testIsIdentifierRenaming():
 		else:
 			if result is not None:
 				pytest.fail(f'Fail to identify "{description}" as not renaming. Actual: {result}')
+
+
+def testGetWord():
+	assert 'a' == CreateLabel.getWord('a', 0)
