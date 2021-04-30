@@ -30,3 +30,4 @@ def testIsIdentifierRenaming():
 
 def testGetWord():
 	assert 'a' == CreateLabel.getWord('a', 0)
+	assert 'a' == CreateLabel.getWord('a', 1)
