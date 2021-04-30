@@ -146,35 +146,40 @@ def createLabels(file: str):
 			removedLine = line
 		elif line[0] == '+':
 			if removedLine is not None:
-				line = line[1:]
-				removedLine = removedLine[1:]
+				while True:
+					line = line[1:]
+					removedLine = removedLine[1:]
 				
-				if len(line) == 0 and len(removedLine) == 0:
-					break
-				if len(line) == 0 or len(removedLine) == 0:
-					return None
-					
-				d = findDifferenceStart(line, removedLine, 1)
-
-				oldWord = getWord(removedLine, d)
-				newWord = getWord(line, d)
-
-				if oldWord is None or newWord is None:
-					return None
-
-				assert len(oldWord) > 0
-				assert len(newWord) > 0
-
-				if oldWord == newWord:
-					return None
-				if oldWord in java_keywords or newWord in java_keywords:
-					return None
-
-				if oldWord in labels:
-					if labels[oldWord] != newWord:
+					if len(line) == 0 and len(removedLine) == 0:
+						break
+					if len(line) == 0 or len(removedLine) == 0:
 						return None
-				else:
-					labels[oldWord] = newWord
+
+					d = findDifferenceStart(line, removedLine, 0)
+					if d == -1:
+						break
+					oldWord = getWord(removedLine, d)
+					newWord = getWord(line, d)
+
+					if oldWord is None or newWord is None:
+						return None
+
+					assert len(oldWord) > 0
+					assert len(newWord) > 0
+
+					if oldWord == newWord:
+						return None
+					if oldWord in java_keywords or newWord in java_keywords:
+						return None
+
+					if oldWord in labels:
+						if labels[oldWord] != newWord:
+							return None
+					else:
+						labels[oldWord] = newWord
+
+					removedLine = removedLine[d + len(oldWord):]
+					line = line[d + len(newWord):]
 
 				# labels.append(currentOffset - len(removedLine) + d)
 				removedLine = None
