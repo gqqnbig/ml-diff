@@ -133,6 +133,9 @@ def createLabels(file: str):
 	if removedLines != addedLines:
 		return None
 
+	if any(filter(lambda l: re.match(r'^[+-]\s*package ', l), lines)):
+		return None
+
 	labels = {}
 	# currentOffset = 0
 	removedLine = None
