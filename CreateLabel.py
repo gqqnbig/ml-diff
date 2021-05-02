@@ -133,6 +133,9 @@ def createLabels(file: str):
 	if removedLines != addedLines:
 		return None
 
+	if any(filter(lambda l: re.match(r'^[+-]\s*package ', l), lines)):
+		return None
+
 	labels = {}
 	# currentOffset = 0
 	removedLine = None
@@ -143,6 +146,14 @@ def createLabels(file: str):
 			removedLine = line
 		elif line[0] == '+':
 			if removedLine is not None:
+				line = line[1:]
+				removedLine = removedLine[1:]
+				
+				if len(line) == 0 and len(removedLine) == 0:
+					break
+				if len(line) == 0 or len(removedLine) == 0:
+					return None
+					
 				d = findDifferenceStart(line, removedLine, 1)
 
 				oldWord = getWord(removedLine, d)
@@ -155,6 +166,8 @@ def createLabels(file: str):
 				if oldWord in java_keywords or newWord in java_keywords:
 					return None
 
+				assert len(oldWord) > 0
+				assert len(newWord) > 0
 				if oldWord in labels:
 					if labels[oldWord] != newWord:
 						return None
@@ -204,41 +217,40 @@ def rearrangeBalancedAddRemove(lines: list, file):
 def getWord(content: str, index):
 	"""
 
-	:param content:
+	:param content: length must be greater than 0.
 	:param index:
 	:return: return None if the given index is not a word. Otherwise return the word
 	"""
+
+	assert content is not None and len(content) > 0, 'Length of content must be greater than 0.'
+
 	assert index >= 0
+	if index > len(content):
+		raise Exception('index must be less than or equal to the length of content.')
 
-	end = None
-	for i in range(index, len(content)):
+	if index == len(content) or content[index].isalnum() == False and content[index] != '_':
+		index -= 1
+		if content[index].isalnum() == False and content[index] != '_':
+			return None
+
+	end = index + 1
+	while end < len(content):
 		# doesn't consider unicode characters for now.
-		if content[i].isalnum() or content[i] == '_':
-			continue
+		if content[end].isalnum() or content[end] == '_':
+			end += 1
 		else:
-			end = i
 			break
 
-	start = None
-	for i in range(index - 1, 0, -1):
+	start = index
+	while start >= 0:
 		# doesn't consider unicode characters for now.
-		if content[i].isalnum() or content[i] == '_':
-			continue
+		if content[start].isalnum() or content[start] == '_':
+			start -= 1
 		else:
-			start = i + 1
 			break
 
-	if start is not None:
-		while start < len(content) and content[start].isnumeric():
-			start += 1
-
-	if start is None or end is None or start >= end:
-		return None
-
-	if start <= index <= end:
-		return content[start:end]
-	else:
-		return None
+	start += 1
+	return content[start:end]
 
 
 # def isIdentifierRenaming(diffFile: str) -> Optional[Tuple[List[int], List[str]]]:
