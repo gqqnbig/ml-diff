@@ -307,7 +307,7 @@ path is a folder of a dataset, which contains many sub-folders.
 		exit()
 
 	if '--dataset' in sys.argv:
-		path = sys.argv[-1]
+		path = os.path.expanduser(sys.argv[-1])
 
 		try:
 			p = sys.argv.index('-c')
@@ -327,7 +327,7 @@ path is a folder of a dataset, which contains many sub-folders.
 				if p.name[0] != '.' and p.is_dir():
 					scanRepo(p.path)
 	else:
-		path = sys.argv[-1]
+		path = os.path.expanduser(sys.argv[-1])
 		if os.path.isfile(path):
 			print(createLabels(path))
 		elif os.path.isdir(path):
