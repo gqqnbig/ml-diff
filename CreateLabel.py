@@ -158,13 +158,15 @@ def createLabels(file: str):
 
 				if oldWord is None or newWord is None:
 					return None
+
+				assert len(oldWord) > 0
+				assert len(newWord) > 0
+
 				if oldWord == newWord:
 					return None
 				if oldWord in java_keywords or newWord in java_keywords:
 					return None
 
-				assert len(oldWord) > 0
-				assert len(newWord) > 0
 				if oldWord in labels:
 					if labels[oldWord] != newWord:
 						return None
