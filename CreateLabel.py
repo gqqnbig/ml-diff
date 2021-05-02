@@ -117,6 +117,10 @@ def dos2unix(file_path):
 		open_file.write(content)
 
 
+def isValidIdentifier(word: str):
+	return word[0].isnumeric() == False
+
+
 def createLabels(file: str):
 	with open(file, 'r', encoding='utf-8') as f:
 		lines = f.readlines()
@@ -170,6 +174,8 @@ def createLabels(file: str):
 					if oldWord == newWord:
 						return None
 					if oldWord in java_keywords or newWord in java_keywords:
+						return None
+					if isValidIdentifier(oldWord) == False or isValidIdentifier(newWord) == False:
 						return None
 
 					if oldWord in labels:
