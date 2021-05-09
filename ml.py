@@ -106,7 +106,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 		file = inputFiles[i]
 		with open(file, 'r', encoding='utf-8') as f:
 			content = f.read()
-			assert content.startswith('@@'), 'diff, index, ---, +++ should be removed.'
+			assert content.startswith('@@'), f'diff, index, ---, +++ should be removed. File: {file}'
 			split = textVectorizationHelper.split(textVectorizationHelper.standardize(content))
 			maxSequenceLength = max(maxSequenceLength, len(split))
 			data.append(' '.join(split))
