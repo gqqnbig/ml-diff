@@ -57,9 +57,10 @@ try:
 	MAX_FILE_SIZE_IN_KB = int(sys.argv[p + 1])
 except:
 	MAX_FILE_SIZE_IN_KB = 10
+	logging.info(f'Set --size-limit-kb {MAX_FILE_SIZE_IN_KB}')
 
 vocab_size = 20 * 1000
-batch_size = 20
+batch_size = 30
 NUM_LABELS = 1
 
 choppedLines = 0
@@ -226,9 +227,10 @@ def trainModel(sequence_length, train_data, test_data):
 		model = tf.keras.Sequential()
 		model.add(vectorize_layer)
 		model.add(tf.keras.layers.Embedding(vocab_size, embedding_dim))
-		model.add(tf.keras.layers.Flatten())
-		model.add(tf.keras.layers.Dense(100, activation='relu'))
-		model.add(tf.keras.layers.Dense(10, activation='relu'))
+		model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64)))
+		# model.add(tf.keras.layers.Flatten())
+		model.add(tf.keras.layers.Dense(64, activation='relu'))
+		# model.add(tf.keras.layers.Dense(10, activation='relu'))
 		model.add(tf.keras.layers.Dense(2, activation='softmax'))
 
 		if __debug__:
@@ -333,7 +335,22 @@ if __name__ == '__main__':
 	b = test_data.shuffle(test_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
 	model = trainModel(maxSequenceLength, a, b)
 
-	# batch size in predict/evaluate is irrelevant to the one in fit.
+	# 	# batch size in predict/evaluate is irrelevant to the one in fit.
+	# 	t = helper.getColumn(test_data, 0).batch(batch_size)
+	#
+	# 	input="""
+	# - public void runDefaultOutgoing(Execution exceution) {
+	# + public void runDefaultOutgoing(Execution execution) {
+	# -   performOutgoingBehavior(exceution, true, null);
+	# +   performOutgoingBehavior(execution, true, null);
+	#  }"""
+	#
+	#
+	#
+	# 	s = time.time()
+	# 	predictions = model.predict_classes(t)
+	# 	print(f'predict time: {time.time() - s}')
+
 	predictions = model.predict_classes(helper.getColumn(test_data, 0).batch(batch_size))
 	actuals = helper.getColumn(test_data, 1)
 	incorrectPredictions = zip(predictions, actuals, helper.getColumn(test_data, 2))
