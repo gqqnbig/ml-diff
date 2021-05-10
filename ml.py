@@ -287,6 +287,9 @@ if __name__ == '__main__':
 	if tf.__version__.startswith('2.3') == False:
 		logging.warning(f'This program is expected to run on Tensorflow 2.3. It may not work on {tf.__version__}.')
 
+	if len(tf.config.list_physical_devices('GPU')) == 0:
+		logging.warning('GPU not available!')
+
 	tf.random.set_seed(977)
 
 	dataset = loadDataset(sys.argv[-1])
