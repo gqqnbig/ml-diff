@@ -280,6 +280,8 @@ if __name__ == '__main__':
 		exit(1)
 
 	print(f'tensorflow version is {tf.__version__}.')
+	if tf.__version__.startswith('2.3') == False:
+		logging.warning(f'This program is expected to run on Tensorflow 2.3. It may not work on {tf.__version__}.')
 
 	tf.random.set_seed(977)
 
