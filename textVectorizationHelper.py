@@ -24,6 +24,8 @@ def standardize(input: str):
 
 # return tf.strings.regex_replace(input, , '1')
 
+wordContinuation = '\uE700'
+
 
 def split(input: str):
 	"""
@@ -37,5 +39,12 @@ def split(input: str):
 	punctuation = r'!"#$%&\'()*+,-./:;<=>?@[\\]^`{|}~'
 	es = re.escape(punctuation)
 
+	# wordContinuition='~'
+
+	input = re.sub(r'([a-z])([A-Z])', rf'\1 {wordContinuation} \2', input)
+	input = re.sub(r'(\w)_', rf'\1 {wordContinuation} _', input)
+	input = re.sub(r'_(\w)', rf'_ {wordContinuation} \1', input)
+
 	result = re.split(r'(?:[ \t]+|(?=[\n' + es + '])|(?<=[\n' + es + ']))', input)
+
 	return list(filter(lambda s: len(s) > 0, result))

@@ -17,3 +17,14 @@ def test_split():
 	assert len(res) == 5
 	for item in res:
 		assert item[0] == '\n' or (item[0] != '\n' and item[-1] != '\n')
+
+
+def test_splitIdentifier():
+	input = 'JavaCustom_split'
+	res = textVectorizationHelper.split(input)
+
+	assert 'Java' in res
+	assert 'Custom' in res
+	assert '_' in res
+	assert 'split' in res
+	assert len(res) == 7
