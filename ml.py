@@ -58,14 +58,9 @@ try:
 except:
 	MAX_FILE_SIZE_IN_KB = 10
 
-num_hiddens = 256
 vocab_size = 20 * 1000
-lr = 1e2
-clipping_theta = 1e-2
 batch_size = 20
 NUM_LABELS = 1
-MAX_LINE_LENGTH = 200
-MAX_LINES = 100
 
 choppedLines = 0
 maxSequenceLength = 0
