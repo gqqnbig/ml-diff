@@ -262,7 +262,7 @@ def testTextVectorization(str_data, **kwargs):
 	# if tf.__version__.startswith('2.3'):
 	#   assert isinstance(vocabulary[0], str), 'The type of elements in vocabulary is string.'
 
-	assert '\n' in vocabulary
+	assert '\n' in vocabulary, f'vocabulary={vocabulary[:100]}'
 	assert len(list(filter(lambda s: len(s) > 1 and (s[0] == '\n' or s[-1] == '\n'), vocabulary))) == 0, \
 		r'No token should start with or end with \n.'
 	print(f'Without capping, the 1-gram vocabulary size is {len(vocabulary)}.')
