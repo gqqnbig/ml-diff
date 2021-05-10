@@ -261,6 +261,12 @@ def testTextVectorization(str_data, **kwargs):
 	vectorize_layer = TextVectorization(**kwargs, ngrams=1)
 	vectorize_layer.adapt(str_data)
 	vocabulary = vectorize_layer.get_vocabulary()
+
+	# if tf.__version__.startswith('2.1'):
+	#   assert isinstance(vocabulary[0], bytes), 'The type of elements in vocabulary is bytes.'
+	# if tf.__version__.startswith('2.3'):
+	#   assert isinstance(vocabulary[0], str), 'The type of elements in vocabulary is string.'
+
 	assert '\n' in vocabulary
 	assert len(list(filter(lambda s: len(s) > 1 and (s[0] == '\n' or s[-1] == '\n'), vocabulary))) == 0, \
 		r'No token should start with or end with \n.'
