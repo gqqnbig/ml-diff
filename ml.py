@@ -58,14 +58,9 @@ try:
 except:
 	MAX_FILE_SIZE_IN_KB = 10
 
-num_hiddens = 256
-vocab_size = 10 * 1000
-lr = 1e2
-clipping_theta = 1e-2
+vocab_size = 20 * 1000
 batch_size = 20
 NUM_LABELS = 1
-MAX_LINE_LENGTH = 200
-MAX_LINES = 100
 
 choppedLines = 0
 maxSequenceLength = 0
@@ -105,11 +100,9 @@ def loadDataset(folder) -> tf.data.Dataset:
 	while i < len(inputFiles):
 		file = inputFiles[i]
 		with open(file, 'r', encoding='utf-8') as f:
-			# 抛弃开头5行
-			# for i in range(5):
-			# 	f.readline()
-
-			split = textVectorizationHelper.split(textVectorizationHelper.standardize(f.read()))
+			content = f.read()
+			assert content.startswith('@@'), f'diff, index, ---, +++ should be removed. File: {file}'
+			split = textVectorizationHelper.split(textVectorizationHelper.standardize(content))
 			maxSequenceLength = max(maxSequenceLength, len(split))
 			data.append(' '.join(split))
 
@@ -263,6 +256,12 @@ def testTextVectorization(str_data, **kwargs):
 	vectorize_layer = TextVectorization(**kwargs, ngrams=1)
 	vectorize_layer.adapt(str_data)
 	vocabulary = vectorize_layer.get_vocabulary()
+
+	# if tf.__version__.startswith('2.1'):
+	#   assert isinstance(vocabulary[0], bytes), 'The type of elements in vocabulary is bytes.'
+	# if tf.__version__.startswith('2.3'):
+	#   assert isinstance(vocabulary[0], str), 'The type of elements in vocabulary is string.'
+
 	assert '\n' in vocabulary
 	assert len(list(filter(lambda s: len(s) > 1 and (s[0] == '\n' or s[-1] == '\n'), vocabulary))) == 0, \
 		r'No token should start with or end with \n.'
@@ -280,6 +279,11 @@ if __name__ == '__main__':
 		exit(1)
 
 	print(f'tensorflow version is {tf.__version__}.')
+	if tf.__version__.startswith('2.3') == False:
+		logging.warning(f'This program is expected to run on Tensorflow 2.3. It may not work on {tf.__version__}.')
+
+	if len(tf.config.list_physical_devices('GPU')) == 0:
+		logging.warning('GPU not available!')
 
 	tf.random.set_seed(977)
 

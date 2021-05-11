@@ -22,7 +22,12 @@ def testIsIdentifierRenaming():
 			oldName = parts[1]
 			newName = parts[2]
 
-			assert result[oldName] == newName, f'Case {description} failed.'
+			assert result != None and result[oldName] == newName, f'Case {description} failed.'
 		else:
 			if result is not None:
 				pytest.fail(f'Fail to identify "{description}" as not renaming. Actual: {result}')
+
+
+def testGetWord():
+	assert 'a' == CreateLabel.getWord('a', 0)
+	assert 'a' == CreateLabel.getWord('a', 1)
