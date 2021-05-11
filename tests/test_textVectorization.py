@@ -12,16 +12,16 @@ import textVectorizationHelper
 def test_splitPunctuation():
 	res = textVectorizationHelper.custom_split('\n+public')
 	res = res.numpy().astype(str).tolist()
-
-	res = list(filter(lambda s: len(s) > 0, res))
 	assert len(res) == 3
 
 
 def test_split():
 	input = 'let us try fn(n)=1+2=3'
 
-	input = '\nhello\nworld\n'
-	res = textVectorizationHelper.split(input)
-	assert len(res) == 5
+	input = '\nhello  world\n'
+	res = textVectorizationHelper.custom_split(input)
+
+	res = res.numpy().astype(str).tolist()
+	assert len(res) == 4
 	for item in res:
 		assert item[0] == '\n' or (item[0] != '\n' and item[-1] != '\n')
