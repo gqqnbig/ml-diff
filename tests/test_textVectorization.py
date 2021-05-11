@@ -9,6 +9,14 @@ sys.path.insert(0, testFolder + '/..')
 import textVectorizationHelper
 
 
+def test_splitPunctuation():
+	res = textVectorizationHelper.custom_split('\n+public')
+	res = res.numpy().astype(str).tolist()
+
+	res = list(filter(lambda s: len(s) > 0, res))
+	assert len(res) == 3
+
+
 def test_split():
 	input = 'let us try fn(n)=1+2=3'
 

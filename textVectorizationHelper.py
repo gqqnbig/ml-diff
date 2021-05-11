@@ -13,9 +13,21 @@ def custom_standardization(input_data: tf.Tensor):
 # return tf.strings.regex_replace(stripped_html, '[%s]' % re.escape(string.punctuation), '')
 
 
+wordSep = '\uE701'
+
+
 @tf.keras.utils.register_keras_serializable()
 def custom_split(input_data: tf.Tensor):
-	return tf.strings.split(input_data, ' ')
+	# removed underscore (_) from string.punctuation
+	punctuation = r'!"#$%&\'()*+,-./:;<=>?@[\\]^`{|}~'
+	es = re.escape(punctuation)
+
+	input_data = tf.strings.regex_replace(input_data, r'[ \t]+', wordSep)
+
+	input_data = tf.strings.regex_replace(input_data, rf'(.?)([\n{es}])', rf'\1{wordSep}\2')
+	input_data = tf.strings.regex_replace(input_data, rf'([\n{es}])(.?)', rf'\1{wordSep}\2')
+	input_data = tf.strings.split(input_data, wordSep)
+	return input_data
 
 
 def standardize(input: str):
