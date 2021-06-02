@@ -39,14 +39,17 @@ def getColumn(ds: tf.data.Dataset, index):
 
 
 def loadModelFromDisk(modelPath: str) -> bool:
-	if os.path.exists(modelPath):
-		if modelPath.endswith('-dirty'):
-			print(f'Are you sure to read {modelPath}? [y]', flush=True)
-			r = sys.stdin.read(1)
-			if r.strip() == 'y':
-				return True
-		else:
-			print(f'Load model from {modelPath}', flush=True)
+	if os.path.exists(modelPath) == False:
+		return False
+
+	if modelPath.endswith('-dirty') == False:
+		print(f'Load model from {modelPath}', flush=True)
+		return True
+
+	if sys.stdin.isatty():
+		print(f'Are you sure to read {modelPath}? [y]', flush=True)
+		r = sys.stdin.read(1)
+		if r.strip() == 'y':
 			return True
 
 	return False
