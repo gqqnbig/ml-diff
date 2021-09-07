@@ -165,7 +165,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 		l = len(list(dataset))
 		timeEnd = time.time()
 		logging.debug(f'Loading {l} data used {timeEnd - timeStart}s')
-	return dataset
+	return dataset.cache()
 
 
 def trainModel(sequence_length, train_data, test_data):
@@ -310,7 +310,6 @@ if __name__ == '__main__':
 	# print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 	#
 	# dataset = dataset.map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
-	dataset = dataset.cache()
 
 	if __debug__:
 		a = list(dataset)[0]
