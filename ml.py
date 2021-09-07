@@ -326,7 +326,7 @@ if __name__ == '__main__':
 	test_length = len(list(test_data))
 	print(f"After shuffling the examples, let's use {len(list(train_data))} examples for training, {test_length} for testing.", flush=True)
 
-	logging.info(f'test_data[0]: {list(test_data)[0]}')
+	logging.debug(f'test_data[0]: {list(test_data)[0]}')
 
 	a = train_data.shuffle(train_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
 	b = test_data.shuffle(test_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
