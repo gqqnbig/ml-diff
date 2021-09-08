@@ -41,6 +41,7 @@ def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 		if len(commit.parents) == 0:
 			print(f'reach root commit {commit.hexsha}')
 			break
+		# first_parent=False makes sure all parents of a merge commit will be iterated.
 		if len(commit.parents) == 2:
 			print(f'Ignore merge commit {commit.hexsha}')
 			continue
