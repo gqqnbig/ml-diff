@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 
 from git import Repo
@@ -114,9 +115,13 @@ if __name__ == '__main__':
 		"tutorials",
 		"wiremock"]
 
-	for repo in repos:
-		print(f'Collecting {repo}')
-		if type(repo) is tuple:
-			collectDiffFromRepo(r'D:\renaming\data\github\\' + repo[0], r'D:\renaming\data\real\\' + repo[0], repo[1])
-		else:
-			collectDiffFromRepo(r'D:\renaming\data\github\\' + repo, r'D:\renaming\data\real\\' + repo)
+	res = []
+	with multiprocessing.Pool(4) as p:
+		for repo in repos:
+			print(f'Collecting {repo}')
+			if type(repo) is tuple:
+				res.append(p.apply_async(collectDiffFromRepo, (r'D:\renaming\data\github\\' + repo[0], r'D:\renaming\data\real\\' + repo[0], repo[1])))
+			else:
+				res.append(p.apply_async(collectDiffFromRepo, (r'D:\renaming\data\github\\' + repo, r'D:\renaming\data\real\\' + repo)))
+
+		[r.get() for r in res]
