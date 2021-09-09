@@ -326,7 +326,7 @@ if __name__ == '__main__':
 path could be a diff file or a folder. This form is usually for debugging.
 
 {sys.argv[0]} [-c num] --dataset path
-path is a folder of a dataset, which contains many sub-folders.
+path is a folder of a dataset, which contains many sub-folders. Dot folders will be ignored.
 -c specifies the number of CPUs to use. If it's not set, environment variable SLURM_CPUS_PER_TASK will be read. Default value is 1.
 ''')
 		exit()
