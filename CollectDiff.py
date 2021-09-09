@@ -30,6 +30,8 @@ def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 	if not os.path.exists(diffFolder):
 		os.makedirs(diffFolder)
 
+	print(f'working on {os.path.basename(repoPath)}')
+	
 	# rorepo is a Repo instance pointing to the git-python repository.
 	# For all you know, the first argument to Repo is a path to the repository
 	# you want to work with
@@ -82,11 +84,7 @@ def collectDiffFromRepo(repoPath, diffFolder, branch='master'):
 			with open(os.path.join(diffFolder, diffFileName), 'w', encoding='utf-8', newline='\n') as f:
 				f.write(content)
 
-	print(f'Ignore {newLineEofCount} files because of newline at EOF changes.')
-
-
-# except Exception as e:
-# 	print(str(e) + ' Possibly a file renaming.')
+	print(f'finished {os.path.basename(repoPath)}')
 
 
 if __name__ == '__main__':
@@ -118,7 +116,6 @@ if __name__ == '__main__':
 	res = []
 	with multiprocessing.Pool(4) as p:
 		for repo in repos:
-			print(f'Collecting {repo}')
 			if type(repo) is tuple:
 				res.append(p.apply_async(collectDiffFromRepo, (r'D:\renaming\data\github\\' + repo[0], r'D:\renaming\data\real\\' + repo[0], repo[1])))
 			else:
