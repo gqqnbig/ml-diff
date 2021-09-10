@@ -33,9 +33,9 @@ def getDiffFiles(folder, maxFileSize: int):
 		if diff.name.endswith('.diff') and diff.stat().st_size <= maxFileSize * 1024:
 			yield diff.path
 
-
-def getColumn(ds: tf.data.Dataset, index):
-	return ds.map(lambda *d: d[index])
+#
+# def getColumn(ds: tf.data.Dataset, index):
+# 	return ds.map(lambda *d: d[index])
 
 
 def loadModelFromDisk(modelPath: str) -> bool:

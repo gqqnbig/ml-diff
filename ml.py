@@ -16,6 +16,8 @@ import subprocess
 import helper
 import textVectorizationHelper
 import RepeatTimer
+# noinspection PyUnresolvedReferences
+import tensorflowExtensions
 
 # vectorize_layer = TextVectorization(
 # 	standardize=None,
@@ -197,7 +199,7 @@ def trainModel(sequence_length, train_data, test_data):
 		model = tf.keras.models.load_model(modelPath)
 	else:
 		if __debug__:
-			str_data = helper.getColumn(train_data, 0).concatenate(helper.getColumn(test_data, 0))
+			str_data = train_data.getColumn(0).concatenate(test_data.getColumn(0))
 			testTextVectorization(str_data, standardize=None,
 								  split=textVectorizationHelper.custom_split,
 								  output_mode='int',
@@ -215,7 +217,7 @@ def trainModel(sequence_length, train_data, test_data):
 			# mismatch.
 			output_sequence_length=sequence_length)
 
-		vectorize_layer.adapt(helper.getColumn(train_data, 0))
+		vectorize_layer.adapt(train_data.getColumn(0))
 		# vocabulary = vectorize_layer.get_vocabulary()
 
 		# a=vectorize_layer.__call__(train_data)
@@ -232,7 +234,7 @@ def trainModel(sequence_length, train_data, test_data):
 		model.add(tf.keras.layers.Dense(2, activation='softmax'))
 
 		if __debug__:
-			y_pred = model.predict(helper.getColumn(train_data, 0))
+			y_pred = model.predict(train_data.getColumn(0))
 			assert len(y_pred.shape) == 2, \
 				'The prediction should have 2 dimensions. The first dimension is the number of examples; the second one is 2, indicating a probability distribution.'
 
@@ -332,9 +334,9 @@ if __name__ == '__main__':
 	model = trainModel(maxSequenceLength, a, b)
 
 	# batch size in predict/evaluate is irrelevant to the one in fit.
-	predictions = model.predict_classes(helper.getColumn(test_data, 0).batch(batch_size))
-	actuals = helper.getColumn(test_data, 1)
-	incorrectPredictions = zip(predictions, actuals, helper.getColumn(test_data, 2))
+	predictions = model.predict_classes(test_data.getColumn(0).batch(batch_size))
+	actuals = test_data.getColumn(1)
+	incorrectPredictions = zip(predictions, actuals, test_data.getColumn(2))
 	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
 	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
 	incorrectPredictions = sorted(incorrectPredictions, key=lambda x: x[2])
