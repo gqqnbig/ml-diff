@@ -96,10 +96,36 @@ def scanRepo(repoPath):
 			filterCombinedDiff(file.path)
 
 
-if __name__ == '__main__':
-	filterCombinedDiff(r'D:\renaming\diffs\repo105\479132.diff')
-	exit()
+usage = f'{os.path.basename(sys.argv[0])} dataset'
+usage += '''
+--parallel\t\tSpecify the number of CPUs to use. By default the program will use all CPUs the main process can use.
+--help\t\tPrint help
+'''
 
-	with multiprocessing.Pool(4) as pool:
-		multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(r'D:\renaming\diffs') if path.is_dir() and path.name[0] != '.']
-		[res.get() for res in multiple_results]
+if __name__ == '__main__':
+	if '--help' in sys.argv:
+		print(usage)
+		exit()
+
+	try:
+		p = sys.argv.index('--parallel')
+		parallel = int(sys.argv[p + 1])
+	except:
+		if hasattr(os, 'sched_getaffinity'):
+			parallel = len(os.sched_getaffinity(0))
+		else:
+			parallel = os.cpu_count()
+
+	if len(sys.argv) <= 1:
+		print('dataset is not provided.\n\n' + usage, file=sys.stderr)
+		exit(1)
+
+	dataFolder = sys.argv[-1]
+	dataFolder = os.path.expanduser(dataFolder)
+	if os.path.isdir(dataFolder):
+		with multiprocessing.Pool(parallel) as pool:
+			multiple_results = [pool.apply_async(scanRepo, (path.path,)) for path in os.scandir(dataFolder) if path.is_dir() and path.name[0] != '.']
+			[res.get() for res in multiple_results]
+	else:
+		print(f'dataset folder {dataFolder} does not exist.\n\n' + usage, file=sys.stderr)
+		exit(1)
