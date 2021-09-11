@@ -41,7 +41,6 @@ try:
 except:
 	pass
 
-
 try:
 	p = sys.argv.index('--log')
 	logLevel = sys.argv[p + 1]
@@ -51,7 +50,6 @@ try:
 	tf.get_logger().setLevel(logLevel)
 except:
 	pass
-
 
 showProgress = '--no-progress' not in sys.argv
 
@@ -85,7 +83,8 @@ def cutAndPadLine(line, length):
 def printStats(dataset: tf.data.Dataset, name):
 	dataset = dataset.forceCache()
 
-
+	# yesExamples = dataset.filter(lambda *d: d[1] == 1).forceCache()
+	# noExamples = dataset.filter(lambda *d: d[1] == 0).forceCache()
 	yesLength = dataset.filter(lambda *d: d[1] == 1).count()
 	noLength = dataset.filter(lambda *d: d[1] == 0).count()
 	logging.info(f'{name} has {yesLength} yes examples, {noLength} no examples, total {yesLength + noLength}.')
@@ -142,6 +141,8 @@ def loadDataset(folder) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
 	# print(f"convert_as_list: {timeit.Timer(lambda: tf.convert_to_tensor(data, tf.int32)).timeit(1)} s")
 	# exit()
 
+	# totalYes = sum(labels)
+	# logging.info(f'{totalYes} yes examples and {len(labels) - totalYes} no examples are loaded.')
 	print('Converting to tensor...', flush=True)
 	# data = np.asarray(data)
 	data = tf.ragged.constant(data)
@@ -161,6 +162,13 @@ def loadDataset(folder) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
 	validationSet = dataset.take(validationLength)
 
 	printStats(validationSet, 'validation set')
+	# if logging.root.level <= logging.INFO:
+	# 	validationSet = validationSet.forceCache()
+	# 	yesExamples = validationSet.filter(lambda *d: d[1] == 1).forceCache()
+	# 	noExamples = validationSet.filter(lambda *d: d[1] == 0).forceCache()
+	# 	yesLength = len(list(yesExamples))
+	# 	noLength = len(list(noExamples))
+	# 	logging.info(f'Validation set has {yesLength} yes examples and {noLength} no examples.')
 
 	dataset = dataset.skip(validationLength)
 
