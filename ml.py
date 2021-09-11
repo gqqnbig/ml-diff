@@ -294,6 +294,7 @@ def testTextVectorization(str_data, **kwargs):
 
 
 usage = f'{os.path.basename(sys.argv[0])} dataset-folder'
+usage+='\n--size-limit-kb Only read files less than or equal to this KB'
 
 
 def validate(model, validationSet):
