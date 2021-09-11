@@ -81,6 +81,15 @@ def cutAndPadLine(line, length):
 		return line[:length]
 
 
+def printStats(dataset: tf.data.Dataset, name):
+	dataset = dataset.forceCache()
+
+
+	yesLength = dataset.filter(lambda *d: d[1] == 1).count()
+	noLength = dataset.filter(lambda *d: d[1] == 0).count()
+	logging.info(f'{name} has {yesLength} yes examples, {noLength} no examples, total {yesLength + noLength}.')
+
+
 def loadDataset(folder) -> tf.data.Dataset:
 	"""
 
@@ -132,32 +141,42 @@ def loadDataset(folder) -> tf.data.Dataset:
 	# print(f"convert_as_list: {timeit.Timer(lambda: tf.convert_to_tensor(data, tf.int32)).timeit(1)} s")
 	# exit()
 
-	print('data loaded. Converting to tensor...', flush=True)
+	print('Converting to tensor...', flush=True)
 	# data = np.asarray(data)
 	data = tf.ragged.constant(data)
 	# assert data.shape[1] == featureSize
 	# todo: 用 tf.RaggedTensor
 	dataset = tf.data.Dataset.from_tensor_slices((data, labels, inputFiles))
+	printStats(dataset, 'full dataset')
 
 	if logging.root.level <= logging.DEBUG:
 		timeStart = time.time()
 
-	# We don't have to cache from_tensor_slices
+	dataset = dataset.shuffle(len(labels)).forceCache()
+	printStats(dataset, 'full dataset 2')
 
-	yesExamples = dataset.filter(lambda *d: d[1] == 1).cache()
-	noExamples = dataset.filter(lambda *d: d[1] == 0).cache()
+	validationLength = len(labels) // 10
+	print(f'Take {validationLength} examples for validation.')
+	validationSet = dataset.take(validationLength)
 
+	printStats(validationSet, 'validation set')
 
+	dataset = dataset.skip(validationLength)
+
+	printStats(dataset, 'training and test')
+
+	yesExamples = dataset.filter(lambda *d: d[1] == 1).forceCache()
+	noExamples = dataset.filter(lambda *d: d[1] == 0).forceCache()
 	yesLength = len(list(yesExamples))
 	noLength = len(list(noExamples))
 	assert yesLength > 0 and noLength > 0
-	print(f'There are {yesLength} yes examples, and {noLength} no examples.', flush=True)
+	# print(f'Excluding validation set, there are {yesLength} yes examples, and {noLength} no examples.', flush=True)
 
 	if yesLength > noLength * 1.1 or noLength > yesLength * 1.1:
 		count = min(yesLength, noLength)
 		yesExamples = yesExamples.shuffle(yesLength).take(count)
 		noExamples = noExamples.shuffle(noLength).take(count)
-		print(f'Rebalance to {count} yes and {count} no examples.')
+		print(f'subsample to {count} yes and {count} no examples.')
 
 		dataset = yesExamples.concatenate(noExamples).shuffle(count * 2)
 	else:
@@ -167,7 +186,7 @@ def loadDataset(folder) -> tf.data.Dataset:
 		l = len(list(dataset))
 		timeEnd = time.time()
 		logging.debug(f'Loading {l} data used {timeEnd - timeStart}s')
-	return dataset.cache()
+	return dataset.forceCache(), validationSet.forceCache()
 
 
 def trainModel(sequence_length, train_data, test_data):
@@ -275,6 +294,24 @@ def testTextVectorization(str_data, **kwargs):
 
 usage = f'{os.path.basename(sys.argv[0])} dataset-folder'
 
+
+def validate(model, validationSet):
+	validationLength = len(list(validationSet))
+	# batch size in predict/evaluate is irrelevant to the one in fit.
+	predictions = model.predict_classes(validationSet.getColumn(0).batch(batch_size))
+	actuals = validationSet.getColumn(1)
+	incorrectPredictions = zip(predictions, actuals, validationSet.getColumn(2))
+	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
+	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
+	incorrectPredictions = sorted(incorrectPredictions, key=lambda x: x[2])
+	cm = tf.math.confusion_matrix(tf.convert_to_tensor(list(actuals)), predictions)
+	print(f'Confusion matrix:\n{cm}\nFalse Positive={cm[1][0]}/{validationLength}={cm[1][0] / validationLength :.2f} (Actual is no, prediction is yes)')
+	if logging.root.level <= logging.INFO:
+		for prediction, actual, path in incorrectPredictions:
+			logging.info(f'{path}: actual={actual}, prediction={prediction}')
+	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / validationLength :.4f}.')
+
+
 if __name__ == '__main__':
 	if len(sys.argv) <= 1:
 		print('You have to specify dataset folder.\n\n' + usage, file=sys.stderr)
@@ -289,7 +326,7 @@ if __name__ == '__main__':
 
 	tf.random.set_seed(977)
 
-	dataset = loadDataset(sys.argv[-1])
+	dataset, validationSet = loadDataset(sys.argv[-1])
 	# Follow the glossary of Google https://developers.google.com/machine-learning/glossary#example
 	print('Dataset loaded.')
 	if isinstance(dataset.element_spec[0], tf.RaggedTensorSpec):
@@ -311,7 +348,7 @@ if __name__ == '__main__':
 	#
 	# print(f'The required memory to fit the dataset is about {length * dataset.element_spec[0].shape[0] * maxEncoding / 1024 / 1024 / 1024 * dataset.element_spec[0].dtype.size :.2f} GB.', flush=True)
 	#
-	# dataset = dataset.map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).cache()
+	# dataset = dataset.map(lambda x, y, filePath: (tf.one_hot(x, maxEncoding), y, filePath)).forceCache()
 
 	if __debug__:
 		a = list(dataset)[0]
@@ -333,18 +370,4 @@ if __name__ == '__main__':
 	b = test_data.shuffle(test_length, reshuffle_each_iteration=True).batch(batch_size).map(lambda x, y, filePath: (x, y))
 	model = trainModel(maxSequenceLength, a, b)
 
-	# batch size in predict/evaluate is irrelevant to the one in fit.
-	predictions = model.predict_classes(test_data.getColumn(0).batch(batch_size))
-	actuals = test_data.getColumn(1)
-	incorrectPredictions = zip(predictions, actuals, test_data.getColumn(2))
-	incorrectPredictions = map(lambda x: (int(x[0]), x[1].numpy(), x[2].numpy().decode()), incorrectPredictions)
-	incorrectPredictions = filter(lambda x: x[0] != x[1], incorrectPredictions)
-	incorrectPredictions = sorted(incorrectPredictions, key=lambda x: x[2])
-
-	cm = tf.math.confusion_matrix(tf.convert_to_tensor(list(actuals)), predictions)
-	print(f'Confusion matrix:\n{cm}\nFalse Positive={cm[1][0]}/{test_length}={cm[1][0] / test_length :.2f} (Actual is no, prediction is yes)')
-
-	if logging.root.level <= logging.INFO:
-		for prediction, actual, path in incorrectPredictions:
-			logging.info(f'{path}: actual={actual}, prediction={prediction}')
-	print(f'Total incorrect prediction is {len(incorrectPredictions)}. predict_classes accuracy is {1 - len(incorrectPredictions) / test_length :.4f}.')
+	validate(model, validationSet)
