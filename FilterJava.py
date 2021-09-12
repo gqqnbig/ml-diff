@@ -7,6 +7,7 @@ import multiprocessing
 from typing import List
 
 import FileEncodingConverter
+import utils
 
 
 def findLineStartsWith(lines, str, start):
@@ -97,8 +98,8 @@ def scanRepo(repoPath):
 
 
 usage = f'{os.path.basename(sys.argv[0])} dataset'
+usage += f'{utils.getParallelismHelp(False)}'
 usage += '''
---parallel\t\tSpecify the number of CPUs to use. By default the program will use all CPUs the main process can use.
 --help\t\tPrint help
 '''
 
@@ -107,14 +108,7 @@ if __name__ == '__main__':
 		print(usage)
 		exit()
 
-	try:
-		p = sys.argv.index('--parallel')
-		parallel = int(sys.argv[p + 1])
-	except:
-		if hasattr(os, 'sched_getaffinity'):
-			parallel = len(os.sched_getaffinity(0))
-		else:
-			parallel = os.cpu_count()
+	parallel = utils.getParallelism()
 
 	if len(sys.argv) <= 1:
 		print('dataset is not provided.\n\n' + usage, file=sys.stderr)

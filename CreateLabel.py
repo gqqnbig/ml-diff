@@ -5,6 +5,7 @@ import os
 import re
 import sys
 
+import utils
 # from typing import List, Tuple, Optional
 #
 # from Antlr import *
@@ -325,22 +326,16 @@ if __name__ == '__main__':
 {sys.argv[0]} path
 path could be a diff file or a folder. This form is usually for debugging.
 
-{sys.argv[0]} [-c num] --dataset path
+{sys.argv[0]} [{utils.getParallelismHelp(True)}] --dataset path
 path is a folder of a dataset, which contains many sub-folders. Dot folders will be ignored.
--c specifies the number of CPUs to use. If it's not set, environment variable SLURM_CPUS_PER_TASK will be read. Default value is 1.
+{utils.getParallelismHelp(False)}
 ''')
 		exit()
 
 	if '--dataset' in sys.argv:
 		path = os.path.expanduser(sys.argv[-1])
 
-		try:
-			p = sys.argv.index('-c')
-			parallelism = int(sys.argv[p + 1])
-		except:
-			parallelism = 1
-
-		parallelism = int(os.getenv('SLURM_CPUS_PER_TASK', parallelism))
+		parallelism = utils.getParallelism()
 
 		print(f'Use {parallelism} cores.')
 		if parallelism > 1:
