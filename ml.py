@@ -9,6 +9,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import tensorflow as tf
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
+from typing import Tuple
 
 import sys
 import subprocess
@@ -90,7 +91,7 @@ def printStats(dataset: tf.data.Dataset, name):
 	logging.info(f'{name} has {yesLength} yes examples, {noLength} no examples, total {yesLength + noLength}.')
 
 
-def loadDataset(folder) -> tf.data.Dataset:
+def loadDataset(folder) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
 	"""
 
 	:param folder:
