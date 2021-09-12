@@ -1,7 +1,6 @@
+import func_timeout
 import os
 import sys
-import multiprocessing
-
 
 from chardet.universaldetector import UniversalDetector
 
@@ -10,7 +9,6 @@ def _get_encoding_type_core(file):
 	# 	rawdata = f.read()
 	# return detect(rawdata)['encoding']
 
-	# If file size is less than 1MB
 	detector = UniversalDetector()
 	for line in open(file, 'rb'):
 		detector.feed(line)
@@ -30,8 +28,7 @@ def _get_encoding_type(file):
 		return _get_encoding_type_core(file)
 	else:
 		# When the pool process is running, this process is idle. Hence there is no over-parallelism.
-		pool = multiprocessing.Pool(1)
-		return pool.apply_async(_get_encoding_type_core, (file,)).get(5)
+		return func_timeout.func_timeout(5, _get_encoding_type_core, (file,))
 
 
 def convertToUtf8(filePath: str):
@@ -51,7 +48,7 @@ def convertToUtf8(filePath: str):
 			e.write(text)
 		print(f'Converted {filePath} from {from_codec} to UTF-8.')
 		return True
-	except multiprocessing.TimeoutError:
+	except func_timeout.FunctionTimedOut:
 		print(f'Unable to determine encoding of {filePath} within time limit.', file=sys.stderr)
 		return False
 	except Exception as e:
